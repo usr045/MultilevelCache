@@ -198,8 +198,23 @@ private:
     void case_IV(auto& entry, KeyT key, FuncT slow_get_page)
     {
         // case A:
-        if((T1_.size() + B1_.size()) == cache_size_) {
-            if(T1_.size() < cache_size_) {
+        if((T1_.size() + B1_.size()) == cache_size_)
+           case_IV_A(entry);
+        
+        // case B:
+        else 
+            case_IV_B(entry, key, slow_get_page);
+    }
+
+    /**
+     * @brief Handles case IV-A when the combined size of T1 and B1 equals
+     *        the cache capacity.
+     *
+     * @param entry Metadata used by the replacement procedure.
+     */
+    void case_IV_A(auto& entry)
+    {
+        if(T1_.size() < cache_size_) {
                 assert(!B1_.empty());
                 
                 // Remove B1 LRU from all cache
@@ -209,19 +224,30 @@ private:
                 
                 replace(entry);
             }
-            else  { // B1 should be empty 
-                assert(!T1_.empty());
-                
-                // Remove T1 LRU from all cache
-                auto t1_lru_it = std::prev(T1_.end());
-                table_.erase(*t1_lru_it);
-                T1_.pop_back();
-            }
+        else  { // B1 should be empty 
+            assert(!T1_.empty());
+            
+            // Remove T1 LRU from all cache
+            auto t1_lru_it = std::prev(T1_.end());
+            table_.erase(*t1_lru_it);
+            T1_.pop_back();
         }
+    }
 
-        // case B:
-        else {
-            assert((T1_.size() + B1_.size()) < cache_size_);
+    /**
+     * @brief Handles case IV-B when the combined size of T1 and B1 is smaller
+     *        than the cache capacity and inserts a new entry into T1.
+
+     * @tparam FuncT Type of the data-loading callable.
+     *
+     * @param entry Metadata used by the replacement procedure.
+     * @param key Key of the new cache entry.
+     * @param slow_get_page Callable used to load data into the cache.
+     */
+    template <typename FuncT>
+    void case_IV_B(auto& entry, KeyT key, FuncT slow_get_page)
+    {
+        assert((T1_.size() + B1_.size()) < cache_size_);
             
             std::size_t sum = T1_.size() + T2_.size() + B1_.size() + B2_.size(); 
             if(sum >= cache_size_) {
@@ -243,7 +269,6 @@ private:
             assert(inserted);
             
             slow_get_page(key, table_it->second.data_.emplace());
-        }
     }
 
     /**
