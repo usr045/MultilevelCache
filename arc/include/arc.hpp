@@ -40,8 +40,8 @@ namespace cache {
  * giving more space to recently used entries, while hits in B2 decrease p,
  * giving more space to frequently used entries.
  *
- * The original article about ARC cache can be viewed here:
- * https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache
+ * The algorithm was completely taken from the original article about the ARC cache:
+ * https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache 
  */
 template <typename KeyT, typename DataT>
 class ArcCache {
@@ -70,15 +70,15 @@ public:
     // TODO: add checking for slow_get_page
 
     /**
-    * @brief Looks up a key in the ARC cache and updates the cache state.
-    * 
-    * @tparam FuncT Type of the data-loading callable.
-    *
-    * @param key Key of the requested cache entry.
-    * @param slow_get_page Callable used to load data on a cache miss.
-    *
-    * @return true if the requested data was already present in T1 or T2;
-    *         false otherwise.   
+     * @brief Looks up a key in the ARC cache and updates the cache state.
+     * 
+     * @tparam FuncT Type of the data-loading callable.
+     *
+     * @param key Key of the requested cache entry.
+     * @param slow_get_page Callable used to load data on a cache miss.
+     *
+     * @return true if the requested data was already present in T1 or T2;
+     *         false otherwise.   
     */
     template <typename FuncT>
     bool lookup_update(KeyT& key, FuncT slow_get_page) {
@@ -103,10 +103,10 @@ public:
  
 private:
     /**
-    * @brief ARC pools are ordered from MRU to LRU:
-    *        begin() is the most recently used element,
-    *        back() is the least recently used element.
-    */
+     * @brief ARC pools are ordered from MRU to LRU:
+     *        begin() is the most recently used element,
+     *        back() is the least recently used element.
+     */
     std::list<KeyT> T1_{}, T2_{}, B1_{}, B2_{};
     
     /** @brief set of entries */
