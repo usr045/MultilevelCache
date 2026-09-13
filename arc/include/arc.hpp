@@ -66,9 +66,6 @@ public:
 
     ArcCache(const ArcCache&) = delete;
 
-    
-    // TODO: add checking for slow_get_page
-
     /**
      * @brief Looks up a key in the ARC cache and updates the cache state.
      * 
