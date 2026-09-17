@@ -59,7 +59,7 @@ public:
 
     explicit ArcCache(std::size_t size) : cache_size_(size)
     {
-        if(size == 0)
+        if(size <= 1)
             throw std::invalid_argument("ARC cache size must be greater "
                                         "than zero");
     }
