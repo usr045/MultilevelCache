@@ -1,9 +1,9 @@
-add_executable(arc_end2end_driver
+add_executable(arc_end2end_tests
     src/driver.cpp
 )
 
-target_link_libraries(arc_end2end_driver PRIVATE arc)
-enable_warnings(arc_end2end_driver)
+target_link_libraries(arc_end2end_tests PRIVATE arc)
+enable_warnings(arc_end2end_tests)
 
 function(add_arc_test_group group_name data_dir answer_dir)
     file(
@@ -26,7 +26,7 @@ function(add_arc_test_group group_name data_dir answer_dir)
         add_test(
             NAME arc.end2end.${group_name}.${case_name}
             COMMAND "${CMAKE_COMMAND}"
-                "-DPROGRAM=$<TARGET_FILE:arc_end2end_driver>"
+                "-DPROGRAM=$<TARGET_FILE:arc_end2end_tests>"
                 "-DINPUT_FILE=${input_file}"
                 "-DEXPECTED_FILE=${expected_file}"
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/run_tests.cmake"
