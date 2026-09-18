@@ -46,7 +46,8 @@ int main()
         if(!(std::cin >> key))
             throw std::runtime_error("Failed to read key");
 
-        if(arc_cache.lookup_update(key, slow_get_page)) {
+        auto result = arc_cache.lookup_update(key, slow_get_page);
+        if(result.hit_) {
             std::cout << "h"; // means cache hit 
             ++hits;
         }

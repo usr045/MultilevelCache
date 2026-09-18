@@ -1,9 +1,6 @@
 /*******************************************************************************
  * @file arc.hpp
  * @brief Declaration and implementation of the ARC cache class.
- *
- * @author usr045
- * @date 2026
  ******************************************************************************/
 
 #pragma once
@@ -47,6 +44,13 @@ public:
     
     enum Pools { T1, T2, B1, B2 };
 
+    struct LookupResult {
+        LookupResult(const DataT& data, bool hit) : data_(data), hit_(hit) {}
+
+        const DataT& data_; 
+        bool hit_;
+    };
+
     struct Entry {
         Pools pool_;
         IterT it_;
@@ -61,7 +65,7 @@ public:
     {
         if(size <= 1)
             throw std::invalid_argument("ARC cache size must be greater "
-                                        "than zero");
+                                        "than one");
     }
 
     ~ArcCache() = default;
@@ -84,8 +88,9 @@ public:
      *         false otherwise.   
     */
     template <typename FuncT>
-    bool lookup_update(const KeyT& key, FuncT& slow_get_page) {
+    LookupResult lookup_update(const KeyT& key, FuncT& slow_get_page) {
         auto table_it = table_.find(key);
+        bool hit = false;
 
         if(table_it == table_.end())
             case_IV(key, slow_get_page);
@@ -98,12 +103,12 @@ public:
 
         else {
             case_I(table_it->second);
-            return true;
+            hit = true;
         }
 
-        return false;
+        return {table_.at(key).data_.value(), hit};
     }
- 
+
 private:
     /**
      * @brief ARC pools are ordered from MRU to LRU:
