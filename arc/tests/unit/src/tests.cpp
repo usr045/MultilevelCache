@@ -22,12 +22,12 @@ public:
 
     void request(KeyT key, const DataT& expected_data, bool expected_hit)
     {
-        auto slow_get_page = [this](const KeyT& loaded_key, DataT& dest){
+        auto loader = [this](const KeyT& loaded_key, DataT& dest){
             loaded_keys_.push_back(loaded_key);
             dest = loaded_key * 100 + (++loads_per_key_[loaded_key]);
         };
 
-        auto result = cache_.lookup_update(key,  slow_get_page);
+        auto result = cache_.lookup_update(key,  loader);
 
         EXPECT_EQ(result.hit_, expected_hit);
         // NOTE in DataT must be implemented operator==
@@ -40,23 +40,24 @@ private:
     std::vector<KeyT> loaded_keys_;
     std::unordered_map<KeyT, DataT> loads_per_key_;
     std::size_t size_;
-};
 
-TEST(ArcCacheConstructorTest, AcceptsPositiveCacheSize)
+}; // class CacheTrace
+
+TEST(ConstructorTest, AcceptsPositiveCacheSize)
 {
     using Cache = ArcCache<int, int>;
     EXPECT_NO_THROW(Cache{2});
     EXPECT_NO_THROW(Cache{15});
 }
 
-TEST(ArcCacheConstructorTest, RejectZeroCacheSize)
+TEST(ConstructorTest, RejectZeroCacheSize)
 {    
     using Cache = ArcCache<int, int>;
     EXPECT_THROW(Cache{0}, std::invalid_argument);
     EXPECT_THROW(Cache{1}, std::invalid_argument);
 }
 
-TEST(ArcCacheLookupUpdateTest, AllMisses)
+TEST(LookupUpdateTest, AllMisses)
 {
     CacheTrace<int, int> trace{2};
 
@@ -70,7 +71,7 @@ TEST(ArcCacheLookupUpdateTest, AllMisses)
 }
 
 
-TEST(ArcCacheTransitionTest, FullT1RemovesOldestKey) {
+TEST(TransitionTest, FullT1RemovesOldestKey) {
     CacheTrace<int, int> trace{2};
 
     trace.request(1, 101, Result::MISS);
@@ -84,7 +85,7 @@ TEST(ArcCacheTransitionTest, FullT1RemovesOldestKey) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(ArcCacheTransitionTest, ReturnFromB1ReloadsAndReplacesFromT2) {
+TEST(TransitionTest, ReturnFromB1ReloadsAndReplacesFromT2) {
     CacheTrace<int, int> trace{2};
 
     trace.request(1, 101, Result::MISS);
@@ -99,7 +100,7 @@ TEST(ArcCacheTransitionTest, ReturnFromB1ReloadsAndReplacesFromT2) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(ArcCacheTransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim) {
+TEST(TransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim) {
     CacheTrace<int, int> trace{2};
 
     trace.request(1, 101, Result::MISS);
@@ -115,7 +116,7 @@ TEST(ArcCacheTransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(ArcCacheTransitionTest, HitInT2UpdatesRecency) {
+TEST(TransitionTest, HitInT2UpdatesRecency) {
     CacheTrace<int, int> trace{3};
 
     trace.request(1, 101, Result::MISS);
@@ -133,7 +134,7 @@ TEST(ArcCacheTransitionTest, HitInT2UpdatesRecency) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(ArcCacheTransitionTest, B2ReturnUsesEqualityCaseInReplace) {
+TEST(TransitionTest, B2ReturnUsesEqualityCaseInReplace) {
     CacheTrace<int, int> trace{3};
 
     trace.request(1, 101, Result::MISS);
@@ -150,7 +151,7 @@ TEST(ArcCacheTransitionTest, B2ReturnUsesEqualityCaseInReplace) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(ArcCacheTransitionTest, RemovesOldestB1Ghost) {
+TEST(TransitionTest, RemovesOldestB1Ghost) {
     CacheTrace<int, int> trace{2};
 
     trace.request(1, 101, Result::MISS);
@@ -165,7 +166,7 @@ TEST(ArcCacheTransitionTest, RemovesOldestB1Ghost) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(ArcCacheTransitionTest, RemovesOldestB2Ghost) {
+TEST(TransitionTest, RemovesOldestB2Ghost) {
     CacheTrace<int, int> trace{2};
 
     trace.request(1, 101, Result::MISS);

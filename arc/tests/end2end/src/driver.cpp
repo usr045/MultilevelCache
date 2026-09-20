@@ -1,9 +1,6 @@
 /*******************************************************************************
  * @file driver.cpp
  * @brief End-to-end testing driver for ARC cache
- *
- * @author usr045
- * @date 2026
  ******************************************************************************/
 
 #include <iostream>
@@ -15,10 +12,9 @@ namespace cache_user {
 using KeyT = int;
 using DataT = double;
 
-void slow_get_page(const KeyT& key, DataT& dest)
+void slow_get_page(const KeyT&, DataT&)
 { 
-    /* cache user implementation */    
-    dest = static_cast<DataT>(key); // just example
+    // cache user implementation
 }
 
 } // namespace cache_user
@@ -48,11 +44,11 @@ int main()
 
         auto result = arc_cache.lookup_update(key, slow_get_page);
         if(result.hit_) {
-            std::cout << "h"; // means cache hit 
+            std::cout << "h"; // cache hit 
             ++hits;
         }
         else
-            std::cout << "m"; // means cache miss
+            std::cout << "m"; // cache miss
     }
 
     std::cout << "\n" << hits << std::endl;
