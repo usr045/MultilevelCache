@@ -11,8 +11,10 @@
 
 using namespace cache;
 
-namespace cache_user {
+using KeyT = int;
+using DataT = int;
 
+namespace cache_user {
 
 void slow_get_page(const KeyT&, DataT&)
 { 
@@ -21,20 +23,16 @@ void slow_get_page(const KeyT&, DataT&)
 
 } // namespace cache_user
 
-
-using KeyT = int;
-using DataT = double;
-
-template <template <typename, typename>typename CacheT>
-int run_tests()
+template <typename CacheT, typename FuncT>
+int run_tests(FuncT& loader)
 {    
-
-
     std::size_t cache_size = 0;
     if(!(std::cin >> cache_size))
         throw std::runtime_error("Failed to read cache size");
 
-    CacheT<KeyT, DataT> arc_cache(cache_size);
+    using KeyT = typename CacheT::key_t;
+
+    CacheT cache(cache_size);
 
     std::size_t reqs_cnt;
     if(!(std::cin >> reqs_cnt))
@@ -48,7 +46,7 @@ int run_tests()
         if(!(std::cin >> key))
             throw std::runtime_error("Failed to read key");
 
-        auto result = arc_cache.lookup_update(key,  cache_user::slow_get_page);
+        auto result = cache.lookup_update(key, loader);
         if(result.hit_) {
             std::cout << "h"; // cache hit 
             ++hits;
@@ -63,19 +61,23 @@ int run_tests()
 
 int main(int argc, char** argv)
 {
+
+    if(argc != 2)
+        throw std::runtime_error("Wrong usage: arc_cache_driver <algorithm's name>");
+
     const std::string_view algorithm = argv[1];
 
     if(algorithm == "arc")
-        return run_tests<ArcCache>();
+        return run_tests<ArcCache<KeyT, DataT>>(cache_user::slow_get_page);
 
     // else if(algorithm == "lirs")
-    //     return run_tests<LirsCache<KeyT, DataT>>();
+        // return run_tests<LirsCache<KeyT, DataT>>(cache_user::slow_get_page);   
 
     // else if(algorithm == "lfu")
-    //     return run_tests<LfuCache<KeyT, DataT>>();
+        // return run_tests<LfuCache<KeyT, DataT>>(cache_user::slow_get_page);
 
     else if(algorithm == "two_q")
-        return run_tests<TwoQ>();
+        return run_tests<TwoQCache<KeyT, DataT>>(cache_user::slow_get_page);
 
     else throw std::runtime_error("Unknown cache algorithm");
 }
