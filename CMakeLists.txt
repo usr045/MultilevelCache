@@ -38,8 +38,18 @@ add_executable(multilevelcache
 enable_warnings(multilevelcache)
 target_include_directories(multilevelcache PRIVATE include)
 
-add_subdirectory(arc)
-add_subdirectory(two_q)
+function(add_cache_lib target)
+    add_library(${target} INTERFACE "include/cache/${target}.hpp")
+    target_include_directories(${target} INTERFACE include)
+endfunction()
+
+add_cache_lib(arc)
+# add_cache_lib(lirs)
+# add_cache_lib(lfu)
+add_cache_lib(two_q)
 
 target_link_libraries(multilevelcache PRIVATE arc)
 target_link_libraries(multilevelcache PRIVATE two_q)
+
+add_subdirectory(tests/unit)
+add_subdirectory(tests/end2end)

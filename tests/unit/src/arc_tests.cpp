@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "arc.hpp"
+#include "cache/arc.hpp"
 
 namespace {
 

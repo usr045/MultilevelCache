@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include <stdexcept>
 
-#include "two_q.hpp"
+#include "cache/two_q.hpp"
 
 using namespace cache;
 
