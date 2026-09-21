@@ -15,9 +15,9 @@
 namespace cache {
 
 template <typename KeyT, typename DataT>
-class TwoQ {
+class TwoQCache {
 public:
-    explicit TwoQ(std::size_t cache_size) :
+    explicit TwoQCache(std::size_t cache_size) :
         cache_size_(cache_size),
         K_in_(std::max<std::size_t>(1, cache_size / 4)),
         K_out_(std::max<std::size_t>(1, cache_size / 2)),
@@ -27,11 +27,15 @@ public:
             throw std::invalid_argument("");
     }
 
-    ~TwoQ() = default;
+    ~TwoQCache() = default;
 
-    TwoQ(const TwoQ&) = delete;
-    TwoQ& operator=(TwoQ) = delete;
+    TwoQCache(const TwoQCache&) = delete;
+    TwoQCache& operator=(TwoQCache) = delete;
     // TODO
+
+    using key_t = KeyT;
+    using data_t = DataT;
+
 
     struct LookupResult {
         LookupResult(const DataT& data, bool hit) : data_(data), hit_(hit) {}
@@ -173,6 +177,6 @@ private:
         entry.data_.reset();
     }
 
-}; // class TwoQ
+}; // class TwoQCache
 
 } // namespace cache

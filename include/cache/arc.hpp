@@ -61,6 +61,9 @@ public:
     ArcCache(ArcCache&&) = delete;
     ArcCache& operator=(ArcCache&&) = delete;
 
+    using key_t = KeyT;
+    using data_t = DataT;
+
     /**
      * @brief Looks up a key in the ARC cache and updates the cache state.
      * 
