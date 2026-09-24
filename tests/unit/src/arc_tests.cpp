@@ -35,7 +35,7 @@ public:
     }
 
 private:
-    ArcCache<KeyT, DataT> cache_;
+    ARC<KeyT, DataT> cache_;
 
     std::vector<KeyT> loaded_keys_;
     std::unordered_map<KeyT, DataT> loads_per_key_;
@@ -45,14 +45,14 @@ private:
 
 TEST(ConstructorTest, AcceptsPositiveCacheSize)
 {
-    using Cache = ArcCache<int, int>;
+    using Cache = ARC<int, int>;
     EXPECT_NO_THROW(Cache{2});
     EXPECT_NO_THROW(Cache{15});
 }
 
 TEST(ConstructorTest, RejectZeroCacheSize)
 {    
-    using Cache = ArcCache<int, int>;
+    using Cache = ARC<int, int>;
     EXPECT_THROW(Cache{0}, std::invalid_argument);
     EXPECT_THROW(Cache{1}, std::invalid_argument);
 }

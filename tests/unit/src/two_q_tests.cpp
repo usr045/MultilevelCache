@@ -5,7 +5,7 @@
 
 using namespace cache;
 
-using Cache = TwoQCache<int, int>;
+using Cache = TwoQ<int, int>;
 
 TEST(Constructor, aaaa)
 {

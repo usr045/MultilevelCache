@@ -17,7 +17,7 @@
 namespace cache {
 
 /**
- * @class ArcCache
+ * @class ARC
  * @brief Adaptive Replacement Cache (ARC) implementation.
  *
  * @tparam KeyT  Type used to identify cached entries.
@@ -37,7 +37,7 @@ namespace cache {
  * https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache
  */
 template <typename KeyT, typename DataT>
-class ArcCache {
+class ARC {
 public:
     struct LookupResult {
         LookupResult(const DataT& data, bool hit) : data_(data), hit_(hit) {}
@@ -46,23 +46,20 @@ public:
         bool hit_;
     };
 
-    explicit ArcCache(std::size_t size) : cache_size_(size)
+    explicit ARC(std::size_t size) : cache_size_(size)
     {
         if(size <= 1)
             throw std::invalid_argument("ARC cache size must be greater "
                                         "than one");
     }
 
-    ~ArcCache() = default;
+    ARC(const ARC&) = delete;
+    ARC& operator=(const ARC&) = delete;
 
-    ArcCache(const ArcCache&) = delete;
-    ArcCache& operator=(const ArcCache&) = delete;
-
-    ArcCache(ArcCache&&) = delete;
-    ArcCache& operator=(ArcCache&&) = delete;
+    ARC(ARC&&) = delete;
+    ARC& operator=(ARC&&) = delete;
 
     using key_t = KeyT;
-    using data_t = DataT;
 
     /**
      * @brief Looks up a key in the ARC cache and updates the cache state.
@@ -276,6 +273,6 @@ private:
         entry_victim.data_.reset();
     }
 
-}; // class ArcCache
+}; // class ARC
 
 } // namespace cache

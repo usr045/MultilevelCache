@@ -15,10 +15,9 @@
 namespace cache {
 
 template <typename KeyT, typename DataT>
-class TwoQCache {
+class TwoQ {
 public:
-    explicit TwoQCache(std::size_t cache_size) :
-        cache_size_(cache_size),
+    explicit TwoQ(std::size_t cache_size) :
         K_in_(std::max<std::size_t>(1, cache_size / 4)),
         K_out_(std::max<std::size_t>(1, cache_size / 2)),
         free_slots_(cache_size)
@@ -27,15 +26,13 @@ public:
             throw std::invalid_argument("");
     }
 
-    ~TwoQCache() = default;
+    TwoQ(const TwoQ&) = delete;
+    TwoQ& operator=(const TwoQ&) = delete;
 
-    TwoQCache(const TwoQCache&) = delete;
-    TwoQCache& operator=(TwoQCache) = delete;
-    // TODO
+    TwoQ(TwoQ&&) = delete;
+    TwoQ& operator=(TwoQ&&) = delete;
 
     using key_t = KeyT;
-    using data_t = DataT;
-
 
     struct LookupResult {
         LookupResult(const DataT& data, bool hit) : data_(data), hit_(hit) {}
@@ -80,7 +77,6 @@ private:
 
     std::list<KeyT> A1_in_{}, A1_out_{}, Am_{};
     std::unordered_map<KeyT, Entry> entries_table_{};
-    std::size_t cache_size_;
 
     std::size_t K_in_, K_out_, free_slots_;
 
@@ -177,6 +173,6 @@ private:
         entry.data_.reset();
     }
 
-}; // class TwoQCache
+}; // class TwoQ
 
 } // namespace cache

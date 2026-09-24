@@ -6,7 +6,7 @@
 
 #include "cache/arc.hpp"
 // #include "cache/lirs.hpp"
-// #include "cache/lfu.hpp"
+#include "cache/lfu.hpp"
 #include "cache/two_q.hpp"
 
 using namespace cache;
@@ -50,6 +50,9 @@ int run_tests(FuncT& loader)
         if(result.hit_) {
             std::cout << "h"; // cache hit 
             ++hits;
+
+            // DEBUG
+            
         }
         else
             std::cout << "m"; // cache miss
@@ -68,16 +71,16 @@ int main(int argc, char** argv)
     const std::string_view algorithm = argv[1];
 
     if(algorithm == "arc")
-        return run_tests<ArcCache<KeyT, DataT>>(cache_user::slow_get_page);
+        return run_tests<ARC<KeyT, DataT>>(cache_user::slow_get_page);
 
     // else if(algorithm == "lirs")
         // return run_tests<LirsCache<KeyT, DataT>>(cache_user::slow_get_page);   
 
-    // else if(algorithm == "lfu")
-        // return run_tests<LfuCache<KeyT, DataT>>(cache_user::slow_get_page);
+    else if(algorithm == "lfu")
+        return run_tests<LFU<KeyT, DataT>>(cache_user::slow_get_page);
 
     else if(algorithm == "two_q")
-        return run_tests<TwoQCache<KeyT, DataT>>(cache_user::slow_get_page);
+        return run_tests<TwoQ<KeyT, DataT>>(cache_user::slow_get_page);
 
     else throw std::runtime_error("Unknown cache algorithm");
 }
