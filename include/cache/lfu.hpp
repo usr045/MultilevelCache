@@ -61,7 +61,7 @@ private:
     using DataTptr = std::unique_ptr<DataT>;
     struct ElemInfo {
         DataTptr data;
-        const KeyT& key;
+        KeyT key;
         FreqBucketIt parent;
 
         ElemInfo(DataTptr d, const KeyT& k, FreqBucketIt p) :
