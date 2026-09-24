@@ -126,7 +126,7 @@ private:
     }
 
     template <typename FuncT>
-    auto& add_new(const KeyT& key, FuncT& loader)
+    auto add_new(const KeyT& key, FuncT& loader)
     {
         A1_in_.emplace_front(key);
 
@@ -159,7 +159,6 @@ private:
 
     void evict_tail(PoolT& src)
     {
-        entries_table_.at(src.back()).data_.reset();
         entries_table_.erase(src.back());
         src.pop_back();
     }
