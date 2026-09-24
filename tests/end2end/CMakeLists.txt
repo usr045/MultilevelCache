@@ -1,6 +1,7 @@
 set(CACHE_ALGORITHMS
     arc
     two_q
+    lfu
 )
 
 set(END2END_TEST_GROUPS

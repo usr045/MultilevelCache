@@ -45,7 +45,7 @@ endfunction()
 
 add_cache_lib(arc)
 # add_cache_lib(lirs)
-# add_cache_lib(lfu)
+add_cache_lib(lfu)
 add_cache_lib(two_q)
 
 target_link_libraries(multilevelcache PRIVATE arc)
