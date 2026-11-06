@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdio>
 #include <limits>
 #include <stdexcept>
@@ -107,7 +109,7 @@ private:
 
         Entry(const Entry&) = delete;
         Entry& operator=(const Entry&) = delete;
-            
+
         Entry(Entry&&) = default;
         Entry& operator=(Entry&&) = default;
     };
