@@ -9,6 +9,11 @@ function(add_unit_tests target lib_name)
         ${lib_name}
         GTest::gtest_main
     )
+
+    target_include_directories(${target} PRIVATE
+        "include/"    
+    )
+
     enable_warnings(${target})
     
     gtest_discover_tests(${target}

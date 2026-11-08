@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "../tests/unit/include/trace.hpp"
 #include "access_result.hpp"
 #include "cache/two_q.hpp"
+#include "trace.hpp"
 
 namespace {
 

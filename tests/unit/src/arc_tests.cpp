@@ -3,9 +3,9 @@
 
 #include <gtest/gtest.h>
 
-#include "../tests/unit/include/trace.hpp"
 #include "access_result.hpp"
 #include "cache/arc.hpp"
+#include "trace.hpp"
 
 namespace {
 
