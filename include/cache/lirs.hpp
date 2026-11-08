@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * @file LIRS.hpp
+ * @brief Declaration and implementation of the LIRS cache algorithm.
+ ******************************************************************************/
+
 #pragma once
 
 #include <cstdio>
@@ -20,7 +25,7 @@ public:
         max_stack_capacity_(2*capacity),
         hir_capacity_(std::max<std::size_t>(1, capacity / 100)),
         lir_capacity_(capacity - hir_capacity_),
-        hir_size_(0), lir_size_(0)    
+        hir_size_(0), lir_size_(0)
     {
         if(capacity <= 1)
             throw std::invalid_argument("LIRS cache size must be greater "

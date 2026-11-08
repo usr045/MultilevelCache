@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @file two_q.hpp
- * @brief Declaration and implementation of the 2Q cache class.
+ * @brief Declaration and implementation of the 2Q cache algorithm.
  ******************************************************************************/
 
 #pragma once

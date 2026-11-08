@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * @file lfu.hpp
+ * @brief Declaration and implementation of the LFU cache algorithm.
+ ******************************************************************************/
+
 #pragma once
 
 #include <stdexcept>
