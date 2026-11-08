@@ -26,17 +26,10 @@ function(enable_warnings target)
         )
     else()
     target_compile_options(${target} PRIVATE
-            -Wall -Wextra -Wpedantic -Weffc++ # -Werror
+            -Wall -Wextra -Wpedantic -Weffc++
         )
     endif()
 endfunction()
-
-add_executable(multilevelcache
-    src/driver.cpp
-)
-
-enable_warnings(multilevelcache)
-target_include_directories(multilevelcache PRIVATE include)
 
 function(add_cache_lib target)
     add_library(${target} INTERFACE "include/cache/${target}.hpp")
@@ -47,9 +40,6 @@ add_cache_lib(arc)
 add_cache_lib(lirs)
 add_cache_lib(lfu)
 add_cache_lib(two_q)
-
-target_link_libraries(multilevelcache PRIVATE arc)
-target_link_libraries(multilevelcache PRIVATE two_q)
 
 add_subdirectory(tests/unit)
 add_subdirectory(tests/end2end)
