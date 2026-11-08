@@ -66,18 +66,17 @@ TEST(LookupUpdateTest, FillsFreeSlotsWithoutEviction)
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(LookupUpdateTest, HitReturnsReferenceToStoredData) //FIXME implement using Trace class
+TEST(LookupUpdateTest, HitReturnsReferenceToStoredData)
 {
-    LFU<int, int> cache{2};
-    auto loader = [](const int& key, int& dest) { dest = key; };
-
-    const auto first = cache.lookup_update(1, loader);
-    const auto second = cache.lookup_update(1, loader);
-    cache.lookup_update(2, loader);
-    const auto third = cache.lookup_update(1, loader);
+    unit_tests::Trace<LFU<int, int>> trace{2};
+    const auto first = trace.request(1, 101, HitStatus::MISS);
+    const auto second = trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    const auto third = trace.request(1, 101, HitStatus::HIT);
 
     EXPECT_EQ(&first.data, &second.data);
     EXPECT_EQ(&second.data, &third.data);
+    EXPECT_EQ(trace.loaded_keys(), (std::vector<int>{1, 2}));
 }
 
 TEST(EvictionTest, EvictsLeastFrequentlyUsedKey)
@@ -185,26 +184,18 @@ TEST(FrequencyTest, EvictedKeyStartsFromFrequencyOne)
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(TypesTest, WorksWithStringKeysAndValues) //FIXME implement using Trace class
+TEST(TypesTest, WorksWithStringKeysAndValues)
 {
-    LFU<std::string, std::string> cache{2};
-    std::vector<std::string> loaded_keys;
-    auto loader = [&loaded_keys](const std::string& key, std::string& dest) {
-        loaded_keys.push_back(key);
-        dest = "page:" + key;
-    };
+    unit_tests::Trace<LFU<std::string, std::string>> trace{2};
 
-    EXPECT_FALSE(cache.lookup_update("a", loader).status);
-    EXPECT_EQ(cache.lookup_update("a", loader).data, "page:a");
-    EXPECT_FALSE(cache.lookup_update("b", loader).status);
-    EXPECT_FALSE(cache.lookup_update("c", loader).status); // evicts "b"
+    trace.request("a", "a1", HitStatus::MISS);
+    trace.request("a", "a1", HitStatus::HIT);
+    trace.request("b", "b1", HitStatus::MISS);
+    trace.request("c", "c1", HitStatus::MISS);
+    trace.request("a", "a1", HitStatus::HIT);
+    trace.request("b", "b2", HitStatus::MISS);
 
-    const auto result = cache.lookup_update("a", loader);
-    EXPECT_TRUE(result.status);
-    EXPECT_EQ(result.data, "page:a");
-
-    const std::vector<std::string> expected{"a", "b", "c"};
-    EXPECT_EQ(loaded_keys, expected);
+    EXPECT_EQ(trace.loaded_keys(), (std::vector<std::string>{"a", "b", "c", "b"}));
 }
 
 } // anonymous namespace

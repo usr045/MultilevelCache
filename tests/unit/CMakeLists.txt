@@ -4,6 +4,7 @@ include(GoogleTest)
 function(add_unit_tests target lib_name)
     add_executable(${target}
         "src/${lib_name}_tests.cpp"
+        "src/trace.cpp"
     )
     target_link_libraries(${target} PRIVATE
         ${lib_name}

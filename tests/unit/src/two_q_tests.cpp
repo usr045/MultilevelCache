@@ -195,25 +195,16 @@ TEST(AmTest, AmVictimIsNotRememberedAsGhost)
 
 TEST(TypesTest, WorksWithStringKeysAndValues)
 {
-    TwoQ<std::string, std::string> cache{2};
-    std::vector<std::string> loaded_keys;
-    auto loader = [&loaded_keys](const std::string& key, std::string& dest) {
-        loaded_keys.push_back(key);
-        dest = "page:" + key;
-    };
+    unit_tests::Trace<TwoQ<std::string, std::string>> trace{2};
 
-    EXPECT_FALSE(cache.lookup_update("a", loader).status);
-    EXPECT_EQ(cache.lookup_update("a", loader).data, "page:a");
-    EXPECT_FALSE(cache.lookup_update("b", loader).status);
-    EXPECT_FALSE(cache.lookup_update("c", loader).status); // "a" -> A1out
-    EXPECT_TRUE(cache.lookup_update("b", loader).status);
+    trace.request("a", "a1", HitStatus::MISS);
+    trace.request("a", "a1", HitStatus::HIT);
+    trace.request("b", "b1", HitStatus::MISS);
+    trace.request("c", "c1", HitStatus::MISS);
+    trace.request("b", "b1", HitStatus::HIT);
+    trace.request("a", "a2", HitStatus::MISS);
 
-    const auto result = cache.lookup_update("a", loader);
-    EXPECT_FALSE(result.status);
-    EXPECT_EQ(result.data, "page:a");
-
-    const std::vector<std::string> expected{"a", "b", "c", "a"};
-    EXPECT_EQ(loaded_keys, expected);
+    EXPECT_EQ(trace.loaded_keys(), (std::vector<std::string>{"a", "b", "c", "a"}));
 }
 
 } // anonymous namespace
