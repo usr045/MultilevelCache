@@ -5,7 +5,9 @@
 #include <string_view>
 
 #include "cache/arc.hpp"
-// #include "cache/lirs.hpp"
+#if 0
+    #include "cache/lirs.hpp"
+#endif
 #include "cache/lfu.hpp"
 #include "cache/two_q.hpp"
 
@@ -47,7 +49,7 @@ int run_tests(FuncT& loader)
             throw std::runtime_error("Failed to read key");
 
         auto result = cache.lookup_update(key, loader);
-        if(result.hit_) {
+        if(result.status) {
             std::cout << "h"; // cache hit 
             ++hits;
 

@@ -5,6 +5,8 @@
 #include <memory>
 #include <unordered_map>
 
+#include "access_result.hpp"
+
 namespace cache {
 
 template <typename KeyT, typename DataT>
@@ -35,7 +37,7 @@ public:
     };
 
     template <typename FuncT>
-    LookupResult lookup_update(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
     {
         auto entry_it = entries_.find(key);
 
@@ -80,9 +82,9 @@ private:
     bool is_full() const noexcept { return capacity_ == entries_.size(); }
 
     template <typename FuncT>
-    LookupResult request(const KeyT& key, FuncT& loader) {
+    AccessResult<DataT> request(const KeyT& key, FuncT& loader) {
         if(is_full()) {
-            auto& lfu_elem_list = freq_list_.front().elem_list; 
+            auto& lfu_elem_list = freq_list_.front().elem_list;
             entries_.erase(lfu_elem_list.back().key); // delete entry from entries
             lfu_elem_list.pop_back(); // delete elem from list
 
@@ -112,10 +114,10 @@ private:
             key, elem_list.begin()
         );
 
-        return {data, false};
+        return {data, HitStatus::MISS};
     }
 
-    LookupResult access_cached(EntryIt entry_it) {
+    AccessResult<DataT> access_cached(EntryIt entry_it) {
         // create new frequency bucket if it not created
         auto freq_it = entry_it->second->parent;
         auto next_freq_it = std::next(freq_it);
@@ -135,7 +137,7 @@ private:
         if(freq_it->elem_list.empty())
             freq_list_.erase(freq_it);
     
-        return {*entry_it->second->data, true};
+        return {*entry_it->second->data, HitStatus::HIT};
     }
 
 }; // class Lfu

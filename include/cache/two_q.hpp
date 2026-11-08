@@ -12,6 +12,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include "access_result.hpp"
+
 namespace cache {
 
 template <typename KeyT, typename DataT>
@@ -33,16 +35,10 @@ public:
     TwoQ& operator=(TwoQ&&) = delete;
 
     using key_t = KeyT;
-
-    struct LookupResult {
-        LookupResult(const DataT& data, bool hit) : data_(data), hit_(hit) {}
-
-        const DataT& data_;
-        bool hit_;
-    };
+    using data_t = DataT;
 
     template <typename FuncT>
-    LookupResult lookup_update(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
     {
         auto entry = entries_table_.find(key);
 
@@ -53,7 +49,7 @@ public:
             return case_in_am(entry->second);
 
         else if(entry->second.pool_ == Pools::A1_in)
-            return {*entry->second.data_, true};
+            return {*entry->second.data_, HitStatus::HIT};
 
         return case_in_a1_out(entry->second, key, loader);
     }
@@ -80,29 +76,29 @@ private:
 
     std::size_t K_in_, K_out_, free_slots_;
 
-    LookupResult case_in_am(const Entry& entry)
+    AccessResult<DataT> case_in_am(const Entry& entry)
     {
         Am_.splice(Am_.begin(), Am_, entry.it_);
 
-        return {*entry.data_, true};
+        return {*entry.data_, HitStatus::HIT};
     }
 
     template <typename FuncT>
-    LookupResult case_in_a1_out(Entry& entry, const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_in_a1_out(Entry& entry, const KeyT& key, FuncT& loader)
     {
         reclaimfor(key);
         return_from_ghost(entry, key, loader);
         
-        return {*entry.data_, false};
+        return {*entry.data_, HitStatus::MISS};
     }
 
     template <typename FuncT>
-    LookupResult case_nowhere(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_nowhere(const KeyT& key, FuncT& loader)
     {
         reclaimfor(key);
         auto entry_it = add_new(key, loader);
 
-        return {*entry_it->second.data_, false};
+        return {*entry_it->second.data_, HitStatus::MISS};
     }
 
     void reclaimfor(const KeyT& key)

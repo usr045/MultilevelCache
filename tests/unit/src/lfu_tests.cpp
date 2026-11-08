@@ -8,11 +8,12 @@
 #include <unordered_map>
 #include <vector>
 
+#include "cache/lfu.hpp"
+#include "access_result.hpp"
+
 namespace {
 
 using namespace cache;
-
-enum Result { MISS=0, HIT=1 };
 
 template <typename KeyT, typename DataT>
 class CacheTrace {
@@ -32,8 +33,8 @@ public:
 
         auto result = cache_.lookup_update(key, loader);
 
-        EXPECT_EQ(result.hit_, expected_hit) << "key " << key;
-        EXPECT_EQ(result.data_, expected_data) << "key " << key;
+        EXPECT_EQ(result.status, expected_hit) << "key " << key;
+        EXPECT_EQ(result.data, expected_data) << "key " << key;
     }
 
 private:
@@ -62,7 +63,7 @@ TEST(LookupUpdateTest, MissLoadsDataOnce)
 {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
+    trace.request(1, 101, HitStatus::MISS);
 
     const std::vector<int> expected{1};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -72,10 +73,10 @@ TEST(LookupUpdateTest, RepeatedRequestsAreHitsWithoutReload)
 {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(1, 101, Result::HIT);
-    trace.request(1, 101, Result::HIT);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(1, 101, HitStatus::HIT);
 
     const std::vector<int> expected{1};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -85,12 +86,12 @@ TEST(LookupUpdateTest, FillsFreeSlotsWithoutEviction)
 {
     CacheTrace<int, int> trace{3};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS);
-    trace.request(3, 301, Result::HIT);
-    trace.request(2, 201, Result::HIT);
-    trace.request(1, 101, Result::HIT);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::HIT);
+    trace.request(1, 101, HitStatus::HIT);
 
     const std::vector<int> expected{1, 2, 3};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -106,24 +107,24 @@ TEST(LookupUpdateTest, HitReturnsReferenceToStoredData)
     cache.lookup_update(2, loader);
     const auto third = cache.lookup_update(1, loader);
 
-    EXPECT_EQ(&first.data_, &second.data_);
-    EXPECT_EQ(&second.data_, &third.data_);
+    EXPECT_EQ(&first.data, &second.data);
+    EXPECT_EQ(&second.data, &third.data);
 }
 
 TEST(EvictionTest, EvictsLeastFrequentlyUsedKey)
 {
     CacheTrace<int, int> trace{3};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(3, 301, Result::HIT);
-    trace.request(4, 401, Result::MISS); // evicts 2
-    trace.request(1, 101, Result::HIT);
-    trace.request(3, 301, Result::HIT);
-    trace.request(2, 202, Result::MISS); // evicts 4
-    trace.request(4, 402, Result::MISS); // evicts 2
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(3, 301, HitStatus::HIT);
+    trace.request(4, 401, HitStatus::MISS); // evicts 2
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(3, 301, HitStatus::HIT);
+    trace.request(2, 202, HitStatus::MISS); // evicts 4
+    trace.request(4, 402, HitStatus::MISS); // evicts 2
 
     const std::vector<int> expected{1, 2, 3, 4, 2, 4};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -133,13 +134,13 @@ TEST(EvictionTest, FrequencyBeatsRecency)
 {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS); // evicts 2, not 1
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 202, Result::MISS); // evicts 3
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS); // evicts 2, not 1
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 202, HitStatus::MISS); // evicts 3
 
     const std::vector<int> expected{1, 2, 3, 2};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -149,16 +150,16 @@ TEST(EvictionTest, TieIsBrokenByLeastRecentlyUsed)
 {
     CacheTrace<int, int> trace{3};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS);
-    trace.request(2, 201, Result::HIT);
-    trace.request(1, 101, Result::HIT);
-    trace.request(3, 301, Result::HIT);
-    trace.request(4, 401, Result::MISS); // evicts 2
-    trace.request(1, 101, Result::HIT);
-    trace.request(3, 301, Result::HIT);
-    trace.request(2, 202, Result::MISS); // evicts 4
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::HIT);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(3, 301, HitStatus::HIT);
+    trace.request(4, 401, HitStatus::MISS); // evicts 2
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(3, 301, HitStatus::HIT);
+    trace.request(2, 202, HitStatus::MISS); // evicts 4
 
     const std::vector<int> expected{1, 2, 3, 4, 2};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -168,13 +169,13 @@ TEST(EvictionTest, NewKeysEvictEachOther)
 {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS); // evicts 2
-    trace.request(2, 202, Result::MISS); // evicts 3
-    trace.request(3, 302, Result::MISS); // evicts 2
-    trace.request(1, 101, Result::HIT);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS); // evicts 2
+    trace.request(2, 202, HitStatus::MISS); // evicts 3
+    trace.request(3, 302, HitStatus::MISS); // evicts 2
+    trace.request(1, 101, HitStatus::HIT);
 
     const std::vector<int> expected{1, 2, 3, 2, 3};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -184,14 +185,14 @@ TEST(FrequencyTest, PromotionDoesNotSkipFrequency)
 {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 201, Result::MISS);
-    trace.request(2, 201, Result::HIT);
-    trace.request(3, 301, Result::MISS); // evicts 2 (freq 2 < 3)
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 202, Result::MISS); // evicts 3
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::HIT);
+    trace.request(3, 301, HitStatus::MISS); // evicts 2 (freq 2 < 3)
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 202, HitStatus::MISS); // evicts 3
 
     const std::vector<int> expected{1, 2, 3, 2};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -201,15 +202,15 @@ TEST(FrequencyTest, EvictedKeyStartsFromFrequencyOne)
 {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(2, 201, Result::MISS);
-    trace.request(2, 201, Result::HIT);
-    trace.request(2, 201, Result::HIT);
-    trace.request(3, 301, Result::MISS); // evicts 1
-    trace.request(1, 102, Result::MISS); // evicts 3
-    trace.request(1, 102, Result::HIT);
-    trace.request(3, 302, Result::MISS); // evicts 1 (freq 2 < 3)
-    trace.request(1, 103, Result::MISS); // evicts 3
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::HIT);
+    trace.request(3, 301, HitStatus::MISS); // evicts 1
+    trace.request(1, 102, HitStatus::MISS); // evicts 3
+    trace.request(1, 102, HitStatus::HIT);
+    trace.request(3, 302, HitStatus::MISS); // evicts 1 (freq 2 < 3)
+    trace.request(1, 103, HitStatus::MISS); // evicts 3
 
     const std::vector<int> expected{1, 2, 3, 1, 3, 1};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -224,14 +225,14 @@ TEST(TypesTest, WorksWithStringKeysAndValues)
         dest = "page:" + key;
     };
 
-    EXPECT_FALSE(cache.lookup_update("a", loader).hit_);
-    EXPECT_EQ(cache.lookup_update("a", loader).data_, "page:a");
-    EXPECT_FALSE(cache.lookup_update("b", loader).hit_);
-    EXPECT_FALSE(cache.lookup_update("c", loader).hit_); // evicts "b"
+    EXPECT_FALSE(cache.lookup_update("a", loader).status);
+    EXPECT_EQ(cache.lookup_update("a", loader).data, "page:a");
+    EXPECT_FALSE(cache.lookup_update("b", loader).status);
+    EXPECT_FALSE(cache.lookup_update("c", loader).status); // evicts "b"
 
     const auto result = cache.lookup_update("a", loader);
-    EXPECT_TRUE(result.hit_);
-    EXPECT_EQ(result.data_, "page:a");
+    EXPECT_TRUE(result.status);
+    EXPECT_EQ(result.data, "page:a");
 
     const std::vector<std::string> expected{"a", "b", "c"};
     EXPECT_EQ(loaded_keys, expected);

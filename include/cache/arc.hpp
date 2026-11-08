@@ -14,6 +14,8 @@
 #include <stdexcept>
 #include <unordered_map>
 
+#include "access_result.hpp"
+
 namespace cache {
 
 /**
@@ -39,13 +41,6 @@ namespace cache {
 template <typename KeyT, typename DataT>
 class ARC {
 public:
-    struct LookupResult {
-        LookupResult(const DataT& data, bool hit) : data_(data), hit_(hit) {}
-
-        const DataT& data_; 
-        bool hit_;
-    };
-
     explicit ARC(std::size_t size) : cache_size_(size)
     {
         if(size <= 1)
@@ -73,7 +68,7 @@ public:
      *         false otherwise.   
     */
     template <typename FuncT>
-    LookupResult lookup_update(const KeyT& key, FuncT& loader) {
+    AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader) {
         auto entry_it = entries_table_.find(key);
 
         if(entry_it == entries_table_.end())
@@ -125,7 +120,7 @@ private:
      */
     std::size_t p_coeff_ = 0;
 
-    LookupResult case_I(Entry& entry)
+    AccessResult<DataT> case_I(Entry& entry)
     { 
         auto& src = entry.pool_ == Pools::T1 ? T1_ : T2_;
         
@@ -133,11 +128,11 @@ private:
         T2_.splice(T2_.begin(), src, entry.it_);
         entry.pool_ = Pools::T2;
 
-        return {*entry.data_, true};
+        return {*entry.data_, HitStatus::HIT};
     }
 
     template <typename FuncT>
-    LookupResult case_II(Entry& entry, const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_II(Entry& entry, const KeyT& key, FuncT& loader)
     {
         const std::size_t delta1 = B1_.size() >= B2_.size() ?
             1 : B2_.size() / B1_.size();
@@ -148,11 +143,11 @@ private:
 
         return_from_ghost_pool(entry, key, loader, B1_);
 
-        return {*entry.data_, false};
+        return {*entry.data_, HitStatus::MISS};
     }
 
     template <typename FuncT>
-    LookupResult case_III(Entry& entry, const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_III(Entry& entry, const KeyT& key, FuncT& loader)
     {
         const std::size_t delta2 = B2_.size() >= B1_.size() ? 
             1 : B1_.size() / B2_.size();
@@ -163,11 +158,11 @@ private:
 
         return_from_ghost_pool(entry, key, loader, B2_);
 
-        return {*entry.data_, false};
+        return {*entry.data_, HitStatus::MISS};
     }
 
     template <typename FuncT>
-    LookupResult case_IV(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_IV(const KeyT& key, FuncT& loader)
     {
         if((T1_.size() + B1_.size()) == cache_size_)
             case_IV_A();
@@ -176,7 +171,7 @@ private:
 
         auto entry_it = add_entry(key, loader);
 
-        return {*entry_it->second.data_, false};
+        return {*entry_it->second.data_, HitStatus::MISS};
     }
 
     void case_IV_A()

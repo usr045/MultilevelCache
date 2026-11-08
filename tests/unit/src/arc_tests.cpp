@@ -4,12 +4,11 @@
 #include <gtest/gtest.h>
 
 #include "cache/arc.hpp"
+#include "access_result.hpp"
 
 namespace {
 
 using namespace cache;
-
-enum Result { MISS=0, HIT=1 };
 
 template <typename KeyT, typename DataT>
 class CacheTrace {
@@ -29,9 +28,9 @@ public:
 
         auto result = cache_.lookup_update(key,  loader);
 
-        EXPECT_EQ(result.hit_, expected_hit);
+        EXPECT_EQ(result.status, expected_hit);
         // NOTE in DataT must be implemented operator==
-        EXPECT_EQ(result.data_, expected_data);
+        EXPECT_EQ(result.data, expected_data);
     }
 
 private:
@@ -61,9 +60,9 @@ TEST(LookupUpdateTest, AllMisses)
 {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS);
 
     std::vector<int> expected_loaded_keys{1, 2, 3};
 
@@ -74,12 +73,12 @@ TEST(LookupUpdateTest, AllMisses)
 TEST(TransitionTest, FullT1RemovesOldestKey) {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS);
-    trace.request(2, 201, Result::HIT);
-    trace.request(1, 102, Result::MISS);
-    trace.request(2, 201, Result::HIT);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::HIT);
+    trace.request(1, 102, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::HIT);
 
     const std::vector<int> expected{1, 2, 3, 1};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -88,13 +87,13 @@ TEST(TransitionTest, FullT1RemovesOldestKey) {
 TEST(TransitionTest, ReturnFromB1ReloadsAndReplacesFromT2) {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS);
-    trace.request(2, 202, Result::MISS);
-    trace.request(1, 102, Result::MISS);
-    trace.request(2, 202, Result::HIT);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(2, 202, HitStatus::MISS);
+    trace.request(1, 102, HitStatus::MISS);
+    trace.request(2, 202, HitStatus::HIT);
 
     const std::vector<int> expected{1, 2, 3, 2, 1};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -103,14 +102,14 @@ TEST(TransitionTest, ReturnFromB1ReloadsAndReplacesFromT2) {
 TEST(TransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim) {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 201, Result::MISS);
-    trace.request(2, 201, Result::HIT);
-    trace.request(3, 301, Result::MISS);
-    trace.request(1, 102, Result::MISS);
-    trace.request(4, 401, Result::MISS);
-    trace.request(2, 202, Result::MISS);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::HIT);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(1, 102, HitStatus::MISS);
+    trace.request(4, 401, HitStatus::MISS);
+    trace.request(2, 202, HitStatus::MISS);
 
     const std::vector<int> expected{1, 2, 3, 1, 4, 2};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -119,16 +118,16 @@ TEST(TransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim) {
 TEST(TransitionTest, HitInT2UpdatesRecency) {
     CacheTrace<int, int> trace{3};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 201, Result::MISS);
-    trace.request(2, 201, Result::HIT);
-    trace.request(3, 301, Result::MISS);
-    trace.request(3, 301, Result::HIT);
-    trace.request(1, 101, Result::HIT);
-    trace.request(4, 401, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 202, Result::MISS);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::HIT);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::HIT);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(4, 401, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 202, HitStatus::MISS);
 
     const std::vector<int> expected{1, 2, 3, 4, 2};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -137,15 +136,15 @@ TEST(TransitionTest, HitInT2UpdatesRecency) {
 TEST(TransitionTest, B2ReturnUsesEqualityCaseInReplace) {
     CacheTrace<int, int> trace{3};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS);
-    trace.request(4, 401, Result::MISS);
-    trace.request(2, 202, Result::MISS);
-    trace.request(3, 302, Result::MISS);
-    trace.request(1, 102, Result::MISS);
-    trace.request(2, 202, Result::HIT);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(4, 401, HitStatus::MISS);
+    trace.request(2, 202, HitStatus::MISS);
+    trace.request(3, 302, HitStatus::MISS);
+    trace.request(1, 102, HitStatus::MISS);
+    trace.request(2, 202, HitStatus::HIT);
 
     const std::vector<int> expected{1, 2, 3, 4, 2, 3, 1};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -154,13 +153,13 @@ TEST(TransitionTest, B2ReturnUsesEqualityCaseInReplace) {
 TEST(TransitionTest, RemovesOldestB1Ghost) {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 201, Result::MISS);
-    trace.request(3, 301, Result::MISS);
-    trace.request(4, 401, Result::MISS);
-    trace.request(2, 202, Result::MISS);
-    trace.request(1, 101, Result::HIT);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(4, 401, HitStatus::MISS);
+    trace.request(2, 202, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
 
     const std::vector<int> expected{1, 2, 3, 4, 2};
     EXPECT_EQ(trace.loaded_keys(), expected);
@@ -169,17 +168,17 @@ TEST(TransitionTest, RemovesOldestB1Ghost) {
 TEST(TransitionTest, RemovesOldestB2Ghost) {
     CacheTrace<int, int> trace{2};
 
-    trace.request(1, 101, Result::MISS);
-    trace.request(1, 101, Result::HIT);
-    trace.request(2, 201, Result::MISS);
-    trace.request(2, 201, Result::HIT);
-    trace.request(3, 301, Result::MISS);
-    trace.request(3, 301, Result::HIT);
-    trace.request(4, 401, Result::MISS);
-    trace.request(5, 501, Result::MISS);
-    trace.request(1, 102, Result::MISS);
-    trace.request(6, 601, Result::MISS);
-    trace.request(3, 301, Result::HIT);
+    trace.request(1, 101, HitStatus::MISS);
+    trace.request(1, 101, HitStatus::HIT);
+    trace.request(2, 201, HitStatus::MISS);
+    trace.request(2, 201, HitStatus::HIT);
+    trace.request(3, 301, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::HIT);
+    trace.request(4, 401, HitStatus::MISS);
+    trace.request(5, 501, HitStatus::MISS);
+    trace.request(1, 102, HitStatus::MISS);
+    trace.request(6, 601, HitStatus::MISS);
+    trace.request(3, 301, HitStatus::HIT);
 
     const std::vector<int> expected{1, 2, 3, 4, 5, 1, 6};
     EXPECT_EQ(trace.loaded_keys(), expected);

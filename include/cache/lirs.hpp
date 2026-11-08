@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <optional>
 
+#include "access_result.hpp"
+
 namespace cache {
 
 template <typename KeyT, typename DataT>
@@ -35,16 +37,10 @@ public:
     LIRS& operator=(LIRS&&) = delete;
 
     using key_t = KeyT;
-
-    struct LookupResult {
-        const DataT& data_;
-        bool hit_;
-
-        LookupResult(const DataT& data, bool hit) : data_(data), hit_(hit) {} 
-    };
+    using data_t = DataT;
 
     template <typename FuncT>
-    LookupResult lookup_update(const KeyT& key, FuncT& loader) {
+    AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader) {
         EntryIterT entry_it = entries_.find(key);
         
         if(entry_it == entries_.end()) { //there is no entry in entries
@@ -81,9 +77,6 @@ private:
     std::size_t hir_size_;
     std::size_t lir_size_;
 
-    const bool CACHE_HIT = true;
-    const bool CACHE_MISS = false;
-
     enum Status {LIR, HIR, UNINIT};
 
     struct Entry;
@@ -118,7 +111,7 @@ private:
     PoolT recency_stack_{};
     PoolT hir_queue_{};
 
-    LookupResult lir_hit(Entry& entry) {
+    AccessResult<DataT> lir_hit(Entry& entry) {
         // Move x to head of recency stack
         const PoolIterT stack_it = entry.stack_it_.value();
         const bool was_in_bottom = in_stack_bottom(stack_it);
@@ -128,10 +121,10 @@ private:
         if(was_in_bottom)
             stack_prune();
 
-        return {*entry.data_, CACHE_HIT};
+        return {*entry.data_, HitStatus::HIT};
     }
 
-    LookupResult stack_hir_hit(Entry& entry) {
+    AccessResult<DataT> stack_hir_hit(Entry& entry) {
         move_to_pool_head(recency_stack_, entry.stack_it_.value());
         remove_from_queue(entry);
         
@@ -139,20 +132,20 @@ private:
 
         stack_prune();
 
-        return {*entry.data_, CACHE_HIT};
+        return {*entry.data_, HitStatus::HIT};
     };
 
-    LookupResult non_stack_hir_hit(Entry& entry) {
+    AccessResult<DataT> non_stack_hir_hit(Entry& entry) {
         move_to_pool_head(hir_queue_, entry.queue_it_.value());
         
         // Add entry in recency stack
         add_to_stack_head(entry);
 
-        return {*entry.data_, CACHE_HIT};
+        return {*entry.data_, HitStatus::HIT};
     }
 
     template <typename FuncT>
-    LookupResult lirs_filling(const KeyT& key, FuncT& loader) {
+    AccessResult<DataT> lirs_filling(const KeyT& key, FuncT& loader) {
         
         Entry& entry = add_new_entry(key);
         
@@ -164,11 +157,11 @@ private:
 
         add_to_stack_head(entry);
 
-        return {*entry.data_, CACHE_MISS};
+        return {*entry.data_, HitStatus::MISS};
     }
 
     template <typename FuncT>
-    LookupResult miss(const KeyT& key, FuncT& loader) {
+    AccessResult<DataT> miss(const KeyT& key, FuncT& loader) {
         if(cache_is_full())
             evict_hir(); // Evict bottom of HIR queue 
         
@@ -182,11 +175,11 @@ private:
         entry.status_ = Status::HIR;
         add_to_queue_head(entry);
 
-        return {*entry.data_, CACHE_MISS};
+        return {*entry.data_, HitStatus::MISS};
     }
 
     template <typename FuncT>
-    LookupResult ghost_hit(Entry& entry, const KeyT& key, FuncT& loader) {
+    AccessResult<DataT> ghost_hit(Entry& entry, const KeyT& key, FuncT& loader) {
         if(cache_is_full())
             evict_hir(); // Evict bottom of HIR queue 
         
@@ -203,7 +196,7 @@ private:
 
         stack_prune();
 
-        return {*entry.data_, CACHE_MISS};
+        return {*entry.data_, HitStatus::MISS};
     }
 
     bool in_stack_bottom(PoolIterT stack_it) {
