@@ -3,62 +3,33 @@
 
 #include <gtest/gtest.h>
 
-#include "cache/arc.hpp"
+#include "../tests/unit/include/trace.hpp"
 #include "access_result.hpp"
+#include "cache/arc.hpp"
 
 namespace {
 
 using namespace cache;
 
-template <typename KeyT, typename DataT>
-class CacheTrace {
-public:
-    CacheTrace(std::size_t size) :
-        cache_{size}, loaded_keys_{}, loads_per_key_{}, size_(size)
-    {}
-
-    const std::vector<KeyT>& loaded_keys() const { return loaded_keys_; }
-
-    void request(KeyT key, const DataT& expected_data, bool expected_hit)
-    {
-        auto loader = [this](const KeyT& loaded_key, DataT& dest){
-            loaded_keys_.push_back(loaded_key);
-            dest = loaded_key * 100 + (++loads_per_key_[loaded_key]);
-        };
-
-        auto result = cache_.lookup_update(key,  loader);
-
-        EXPECT_EQ(result.status, expected_hit);
-        // NOTE in DataT must be implemented operator==
-        EXPECT_EQ(result.data, expected_data);
-    }
-
-private:
-    ARC<KeyT, DataT> cache_;
-
-    std::vector<KeyT> loaded_keys_;
-    std::unordered_map<KeyT, DataT> loads_per_key_;
-    std::size_t size_;
-
-}; // class CacheTrace
-
 TEST(ConstructorTest, AcceptsPositiveCacheSize)
 {
-    using Cache = ARC<int, int>;
-    EXPECT_NO_THROW(Cache{2});
-    EXPECT_NO_THROW(Cache{15});
+    using ARC = ARC<int, int>;
+
+    EXPECT_NO_THROW(ARC{2});
+    EXPECT_NO_THROW(ARC{15});
 }
 
 TEST(ConstructorTest, RejectZeroCacheSize)
 {    
-    using Cache = ARC<int, int>;
-    EXPECT_THROW(Cache{0}, std::invalid_argument);
-    EXPECT_THROW(Cache{1}, std::invalid_argument);
+    using ARC = ARC<int, int>;
+
+    EXPECT_THROW(ARC{0}, std::invalid_argument);
+    EXPECT_THROW(ARC{1}, std::invalid_argument);
 }
 
 TEST(LookupUpdateTest, AllMisses)
 {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -71,7 +42,7 @@ TEST(LookupUpdateTest, AllMisses)
 
 
 TEST(TransitionTest, FullT1RemovesOldestKey) {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -85,7 +56,7 @@ TEST(TransitionTest, FullT1RemovesOldestKey) {
 }
 
 TEST(TransitionTest, ReturnFromB1ReloadsAndReplacesFromT2) {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -100,7 +71,7 @@ TEST(TransitionTest, ReturnFromB1ReloadsAndReplacesFromT2) {
 }
 
 TEST(TransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim) {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -116,7 +87,7 @@ TEST(TransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim) {
 }
 
 TEST(TransitionTest, HitInT2UpdatesRecency) {
-    CacheTrace<int, int> trace{3};
+    unit_tests::Trace<ARC<int, int>> trace{3};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -134,7 +105,7 @@ TEST(TransitionTest, HitInT2UpdatesRecency) {
 }
 
 TEST(TransitionTest, B2ReturnUsesEqualityCaseInReplace) {
-    CacheTrace<int, int> trace{3};
+    unit_tests::Trace<ARC<int, int>> trace{3};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -151,7 +122,7 @@ TEST(TransitionTest, B2ReturnUsesEqualityCaseInReplace) {
 }
 
 TEST(TransitionTest, RemovesOldestB1Ghost) {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -166,7 +137,7 @@ TEST(TransitionTest, RemovesOldestB1Ghost) {
 }
 
 TEST(TransitionTest, RemovesOldestB2Ghost) {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);

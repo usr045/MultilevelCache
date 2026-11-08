@@ -28,13 +28,7 @@ public:
     LFU& operator=(LFU&&) = delete;
 
     using key_t = KeyT;
-
-    struct LookupResult {
-        const DataT& data_;
-        bool hit_;
-        
-        LookupResult(const DataT& data, bool hit) : data_(data), hit_(hit) {}
-    };
+    using data_t = DataT;
 
     template <typename FuncT>
     AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)

@@ -1,67 +1,36 @@
-#include "cache/lfu.hpp"
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 
-#include <cstddef>
-#include <stdexcept>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
-#include "cache/lfu.hpp"
+#include "../tests/unit/include/trace.hpp"
 #include "access_result.hpp"
+#include "cache/lfu.hpp"
 
 namespace {
 
 using namespace cache;
 
-template <typename KeyT, typename DataT>
-class CacheTrace {
-public:
-    explicit CacheTrace(std::size_t size) :
-        cache_{size}, loaded_keys_{}, loads_per_key_{}
-    {}
-
-    const std::vector<KeyT>& loaded_keys() const { return loaded_keys_; }
-
-    void request(KeyT key, const DataT& expected_data, bool expected_hit)
-    {
-        auto loader = [this](const KeyT& loaded_key, DataT& dest) {
-            loaded_keys_.push_back(loaded_key);
-            dest = loaded_key * 100 + (++loads_per_key_[loaded_key]);
-        };
-
-        auto result = cache_.lookup_update(key, loader);
-
-        EXPECT_EQ(result.status, expected_hit) << "key " << key;
-        EXPECT_EQ(result.data, expected_data) << "key " << key;
-    }
-
-private:
-    LFU<KeyT, DataT> cache_;
-
-    std::vector<KeyT> loaded_keys_;
-    std::unordered_map<KeyT, int> loads_per_key_;
-
-}; // class CacheTrace
-
 TEST(ConstructorTest, AcceptsCacheSizeGreaterThanOne)
 {
-    using Cache = LFU<int, int>;
-    EXPECT_NO_THROW(Cache{2});
-    EXPECT_NO_THROW(Cache{15});
+    using LFU = LFU<int, int>;
+
+    EXPECT_NO_THROW(LFU{2});
+    EXPECT_NO_THROW(LFU{15});
 }
 
 TEST(ConstructorTest, RejectsCacheSizeZeroAndOne)
 {
-    using Cache = LFU<int, int>;
-    EXPECT_THROW(Cache{0}, std::invalid_argument);
-    EXPECT_THROW(Cache{1}, std::invalid_argument);
+    using LFU = LFU<int, int>;
+
+    EXPECT_THROW(LFU{0}, std::invalid_argument);
+    EXPECT_THROW(LFU{1}, std::invalid_argument);
 }
 
 TEST(LookupUpdateTest, MissLoadsDataOnce)
 {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<LFU<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
 
@@ -71,7 +40,7 @@ TEST(LookupUpdateTest, MissLoadsDataOnce)
 
 TEST(LookupUpdateTest, RepeatedRequestsAreHitsWithoutReload)
 {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<LFU<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -84,7 +53,7 @@ TEST(LookupUpdateTest, RepeatedRequestsAreHitsWithoutReload)
 
 TEST(LookupUpdateTest, FillsFreeSlotsWithoutEviction)
 {
-    CacheTrace<int, int> trace{3};
+    unit_tests::Trace<LFU<int, int>> trace{3};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -97,7 +66,7 @@ TEST(LookupUpdateTest, FillsFreeSlotsWithoutEviction)
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(LookupUpdateTest, HitReturnsReferenceToStoredData)
+TEST(LookupUpdateTest, HitReturnsReferenceToStoredData) //FIXME implement using Trace class
 {
     LFU<int, int> cache{2};
     auto loader = [](const int& key, int& dest) { dest = key; };
@@ -113,7 +82,7 @@ TEST(LookupUpdateTest, HitReturnsReferenceToStoredData)
 
 TEST(EvictionTest, EvictsLeastFrequentlyUsedKey)
 {
-    CacheTrace<int, int> trace{3};
+    unit_tests::Trace<LFU<int, int>> trace{3};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -132,7 +101,7 @@ TEST(EvictionTest, EvictsLeastFrequentlyUsedKey)
 
 TEST(EvictionTest, FrequencyBeatsRecency)
 {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<LFU<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -148,7 +117,7 @@ TEST(EvictionTest, FrequencyBeatsRecency)
 
 TEST(EvictionTest, TieIsBrokenByLeastRecentlyUsed)
 {
-    CacheTrace<int, int> trace{3};
+    unit_tests::Trace<LFU<int, int>> trace{3};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -167,7 +136,7 @@ TEST(EvictionTest, TieIsBrokenByLeastRecentlyUsed)
 
 TEST(EvictionTest, NewKeysEvictEachOther)
 {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<LFU<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -183,7 +152,7 @@ TEST(EvictionTest, NewKeysEvictEachOther)
 
 TEST(FrequencyTest, PromotionDoesNotSkipFrequency)
 {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<LFU<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -200,7 +169,7 @@ TEST(FrequencyTest, PromotionDoesNotSkipFrequency)
 
 TEST(FrequencyTest, EvictedKeyStartsFromFrequencyOne)
 {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<LFU<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -216,7 +185,7 @@ TEST(FrequencyTest, EvictedKeyStartsFromFrequencyOne)
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(TypesTest, WorksWithStringKeysAndValues)
+TEST(TypesTest, WorksWithStringKeysAndValues) //FIXME implement using Trace class
 {
     LFU<std::string, std::string> cache{2};
     std::vector<std::string> loaded_keys;

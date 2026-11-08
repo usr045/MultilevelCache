@@ -1,53 +1,18 @@
 #include "gtest/gtest.h"
-
-#include <cstddef>
 #include <stdexcept>
+
 #include <string>
-#include <unordered_map>
 #include <vector>
 
+#include "../tests/unit/include/trace.hpp"
+#include "access_result.hpp"
 #include "cache/two_q.hpp"
-
-using namespace cache;
-
-using Cache = TwoQ<int, int>;
 
 namespace {
 
-enum Result { MISS=0, HIT=1 };
+using namespace cache;
 
-template <typename KeyT, typename DataT>
-class CacheTrace {
-public:
-    explicit CacheTrace(std::size_t size) :
-        cache_{size}, loaded_keys_{}, loads_per_key_{}
-    {}
-
-    const std::vector<KeyT>& loaded_keys() const { return loaded_keys_; }
-
-    void request(KeyT key, const DataT& expected_data, bool expected_hit)
-    {
-        auto loader = [this](const KeyT& loaded_key, DataT& dest) {
-            loaded_keys_.push_back(loaded_key);
-            dest = loaded_key * 100 + (++loads_per_key_[loaded_key]);
-        };
-
-        auto result = cache_.lookup_update(key, loader);
-
-        EXPECT_EQ(result.status, expected_hit) << "key " << key;
-        EXPECT_EQ(result.data, expected_data) << "key " << key;
-    }
-
-private:
-    TwoQ<KeyT, DataT> cache_;
-
-    std::vector<KeyT> loaded_keys_;
-    std::unordered_map<KeyT, int> loads_per_key_;
-
-}; // class CacheTrace
-
-
-void fill_am(CacheTrace<int, int>& trace)
+void fill_am(unit_tests::Trace<TwoQ<int, int>>& trace)
 {
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -65,18 +30,22 @@ void fill_am(CacheTrace<int, int>& trace)
 
 TEST(ConstructorTest, AcceptsCacheSizeGreaterThanOne)
 {
-    EXPECT_NO_THROW(Cache{2});
-    EXPECT_NO_THROW(Cache{15});
+    using TwoQ = TwoQ<int, int>;
+
+    EXPECT_NO_THROW(TwoQ{2});
+    EXPECT_NO_THROW(TwoQ{15});
 }
 TEST(ConstructorTest, RejectsCacheSizeZeroAndOne)
 {
-    EXPECT_THROW(Cache{0}, std::invalid_argument);
-    EXPECT_THROW(Cache{1}, std::invalid_argument);
+    using TwoQ = TwoQ<int, int>;
+
+    EXPECT_THROW(TwoQ{0}, std::invalid_argument);
+    EXPECT_THROW(TwoQ{1}, std::invalid_argument);
 }
 
 TEST(LookupUpdateTest, MissLoadsDataOnce)
 {
-    CacheTrace<int, int> trace{2};
+    unit_tests::Trace<TwoQ<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
 
@@ -86,7 +55,7 @@ TEST(LookupUpdateTest, MissLoadsDataOnce)
 
 TEST(LookupUpdateTest, FillsFreeSlotsWithoutEviction)
 {
-    CacheTrace<int, int> trace{4};
+    unit_tests::Trace<TwoQ<int, int>> trace{4};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -103,7 +72,7 @@ TEST(LookupUpdateTest, FillsFreeSlotsWithoutEviction)
 
 TEST(A1inTest, EvictsInFifoOrder)
 {
-    CacheTrace<int, int> trace{4};
+    unit_tests::Trace<TwoQ<int, int>> trace{4};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -121,7 +90,7 @@ TEST(A1inTest, EvictsInFifoOrder)
 
 TEST(A1inTest, HitInA1inDoesNotPromoteToAm)
 {
-    CacheTrace<int, int> trace{4};
+    unit_tests::Trace<TwoQ<int, int>> trace{4};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
@@ -138,7 +107,7 @@ TEST(A1inTest, HitInA1inDoesNotPromoteToAm)
 
 TEST(A1outTest, GhostHitReloadsDataAndCountsAsMiss)
 {
-    CacheTrace<int, int> trace{4};
+    unit_tests::Trace<TwoQ<int, int>> trace{4};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -154,7 +123,7 @@ TEST(A1outTest, GhostHitReloadsDataAndCountsAsMiss)
 
 TEST(A1outTest, KeyReturnedFromGhostSurvivesScan)
 {
-    CacheTrace<int, int> trace{4};
+    unit_tests::Trace<TwoQ<int, int>> trace{4};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -175,7 +144,7 @@ TEST(A1outTest, KeyReturnedFromGhostSurvivesScan)
 
 TEST(A1outTest, GhostListIsBoundedByKout)
 {
-    CacheTrace<int, int> trace{4};
+    unit_tests::Trace<TwoQ<int, int>> trace{4};
 
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
@@ -197,7 +166,7 @@ TEST(A1outTest, GhostListIsBoundedByKout)
 
 TEST(AmTest, HitInAmMovesKeyToMru)
 {
-    CacheTrace<int, int> trace{4};
+    unit_tests::Trace<TwoQ<int, int>> trace{4};
     fill_am(trace);
 
     trace.request(9, 901, HitStatus::MISS); // evicts 2 from Am
@@ -210,7 +179,7 @@ TEST(AmTest, HitInAmMovesKeyToMru)
 
 TEST(AmTest, AmVictimIsNotRememberedAsGhost)
 {
-    CacheTrace<int, int> trace{4};
+    unit_tests::Trace<TwoQ<int, int>> trace{4};
     fill_am(trace);
 
     trace.request(9, 901, HitStatus::MISS);   // evicts 2 from Am
