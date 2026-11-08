@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @file two_q.hpp
- * @brief Declaration and implementation of the 2Q cache algorithm.
+ * @brief Declaration and implementation of the TwoQ cache.
  ******************************************************************************/
 
 #pragma once
@@ -16,9 +16,21 @@
 
 namespace cache {
 
+/**
+ * @class TwoQ
+ * @brief 2Q cache with an admission queue, a ghost queue and an LRU queue.
+ * @tparam KeyT Hashable, equality-comparable key type.
+ * @tparam DataT Default-constructible cached data type.
+ * @note Copying and moving are disabled.
+ */
 template <typename KeyT, typename DataT>
 class TwoQ {
 public:
+    /**
+     * @brief Creates a cache with the given resident capacity.
+     * @param cache_size Maximum number of resident entries.
+     * @throws std::invalid_argument If cache_size <= 1.
+     */
     explicit TwoQ(std::size_t cache_size) :
         K_in_(std::max<std::size_t>(1, cache_size / 4)),
         K_out_(std::max<std::size_t>(1, cache_size / 2)),
@@ -37,6 +49,12 @@ public:
     using key_t = KeyT;
     using data_t = DataT;
 
+    /**
+     * @brief Looks up a key and updates the replacement state.
+     * @param key Key of the requested entry.
+     * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
+     * @return Cached data by reference and HIT or MISS; see AccessResult.
+     */
     template <typename FuncT>
     AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
     {
@@ -61,11 +79,13 @@ private:
     using IterT = typename PoolT::iterator;
     using DataptrT = typename std::unique_ptr<DataT>;
 
+    /** @brief Resident or ghost entry with its pool position. */
     struct Entry {
         std::unique_ptr<DataT> data_;
         IterT it_;
         Pools pool_;
 
+        /** @brief Creates an entry with its data, list position and pool. */
         Entry(DataptrT data, IterT it, Pools pool) :
             data_(std::move(data)), it_(it), pool_(pool)
         {}
@@ -76,6 +96,7 @@ private:
 
     std::size_t K_in_, K_out_, free_slots_;
 
+    /** @brief Moves a resident Am entry to the MRU position. */
     AccessResult<DataT> case_in_am(const Entry& entry)
     {
         Am_.splice(Am_.begin(), Am_, entry.it_);
@@ -83,6 +104,7 @@ private:
         return {*entry.data_, HitStatus::HIT};
     }
 
+    /** @brief Makes room and reloads an A1_out ghost entry into Am. */
     template <typename FuncT>
     AccessResult<DataT> case_in_a1_out(Entry& entry, const KeyT& key, FuncT& loader)
     {
@@ -92,6 +114,7 @@ private:
         return {*entry.data_, HitStatus::MISS};
     }
 
+    /** @brief Makes room and loads a previously unseen key into A1_in. */
     template <typename FuncT>
     AccessResult<DataT> case_nowhere(const KeyT& key, FuncT& loader)
     {
@@ -101,6 +124,7 @@ private:
         return {*entry_it->second.data_, HitStatus::MISS};
     }
 
+    /** @brief Frees a resident slot and trims ghost history when needed. */
     void reclaimfor(const KeyT& key)
     {
         if(free_slots_ == 0) {
@@ -121,6 +145,7 @@ private:
         }
     }
 
+    /** @brief Creates and loads an entry at the head of A1_in. */
     template <typename FuncT>
     auto add_new(const KeyT& key, FuncT& loader)
     {
@@ -142,6 +167,7 @@ private:
         return entry_it;
     }
 
+    /** @brief Reloads a ghost entry into Am and consumes a free slot. */
     template <typename FuncT>
     void return_from_ghost(Entry& entry, const KeyT& key, FuncT& loader)
     {
@@ -153,12 +179,14 @@ private:
         loader(key, *entry.data_);
     }
 
+    /** @brief Removes the tail entry from a nonempty pool and the entry table. */
     void evict_tail(PoolT& src)
     {
         entries_table_.erase(src.back());
         src.pop_back();
     }
 
+    /** @brief Moves the tail of a nonempty pool to a ghost pool and releases its data. */
     void evict_tail(PoolT& src, PoolT& dest, const Pools poolname)
     {
         dest.splice(dest.begin(), src, std::prev(src.end()));

@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @file belady.hpp
- * @brief Declaration and implementation of the Belady cache algorithm
+ * @brief Placeholder for the Belady cache.
  ******************************************************************************/
 
 #pragma once
@@ -12,9 +12,20 @@
 
 namespace cache {
 
+/**
+ * @class Belady
+ * @brief Placeholder for the Belady optimal replacement cache.
+ * @tparam KeyT Cache key type.
+ * @tparam DataT Cached data type.
+ */
 template <typename KeyT, typename DataT>
 class Belady {
 public:
+    /**
+     * @brief Creates a cache with the given resident capacity.
+     * @param capacity Maximum number of resident entries.
+     * @throws std::invalid_argument If capacity <= 2.
+     */
     explicit Belady(std::size_t capacity) :
         cache_capacity_(capacity)
     {
@@ -26,6 +37,7 @@ public:
     using key_t = KeyT;
     using data_t = DataT;
 
+    /** @brief Unimplemented request placeholder; performs no lookup or loading. */
     template<typename FuncT>
     void lookup_update(KeyT key) {
         

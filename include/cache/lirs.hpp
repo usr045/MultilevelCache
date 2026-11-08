@@ -1,6 +1,6 @@
 /*******************************************************************************
- * @file LIRS.hpp
- * @brief Declaration and implementation of the LIRS cache algorithm.
+ * @file lirs.hpp
+ * @brief Declaration and implementation of the LIRS cache.
  ******************************************************************************/
 
 #pragma once
@@ -17,9 +17,21 @@
 
 namespace cache {
 
+/**
+ * @class LIRS
+ * @brief Low Inter-reference Recency Set cache with LIR and HIR entries.
+ * @tparam KeyT Hashable, equality-comparable key type.
+ * @tparam DataT Default-constructible cached data type.
+ * @note Copying and moving are disabled.
+ */
 template <typename KeyT, typename DataT>
 class LIRS {
 public:
+    /**
+     * @brief Creates a cache with the given resident capacity.
+     * @param capacity Maximum number of resident entries.
+     * @throws std::invalid_argument If capacity <= 1 or capacity > SIZE_MAX / 2.
+     */
     explicit LIRS(std::size_t capacity) :
         cache_capacity_(capacity),
         max_stack_capacity_(2*capacity),
@@ -44,6 +56,12 @@ public:
     using key_t = KeyT;
     using data_t = DataT;
 
+    /**
+     * @brief Looks up a key and updates the replacement state.
+     * @param key Key of the requested entry.
+     * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
+     * @return Cached data by reference and HIT or MISS; see AccessResult.
+     */
     template <typename FuncT>
     AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader) {
         EntryIterT entry_it = entries_.find(key);
@@ -92,6 +110,7 @@ private:
     using PoolIterT  = typename PoolT::iterator;
     using EntryIterT = typename EntriesT::iterator; 
 
+    /** @brief LIR or HIR entry with optional stack and queue positions. */
     struct Entry {
         std::unique_ptr<DataT> data_ = nullptr;
         
@@ -103,12 +122,17 @@ private:
         Status status_ = Status::UNINIT;
         bool is_resident_ = false;
 
+        /** @brief Allocates data for a new nonresident, unclassified entry. */
         Entry() : data_(std::make_unique<DataT>()) {}
 
+        /** @brief Copy construction is disabled. */
         Entry(const Entry&) = delete;
+        /** @brief Copy assignment is disabled. */
         Entry& operator=(const Entry&) = delete;
 
+        /** @brief Move construction is defaulted. */
         Entry(Entry&&) = default;
+        /** @brief Move assignment is defaulted. */
         Entry& operator=(Entry&&) = default;
     };
     
@@ -116,6 +140,7 @@ private:
     PoolT recency_stack_{};
     PoolT hir_queue_{};
 
+    /** @brief Moves an LIR entry to the stack head and prunes the stack if needed. */
     AccessResult<DataT> lir_hit(Entry& entry) {
         // Move x to head of recency stack
         const PoolIterT stack_it = entry.stack_it_.value();
@@ -129,6 +154,7 @@ private:
         return {*entry.data_, HitStatus::HIT};
     }
 
+    /** @brief Promotes a resident stack HIR entry to LIR and demotes the bottom LIR entry. */
     AccessResult<DataT> stack_hir_hit(Entry& entry) {
         move_to_pool_head(recency_stack_, entry.stack_it_.value());
         remove_from_queue(entry);
@@ -140,6 +166,7 @@ private:
         return {*entry.data_, HitStatus::HIT};
     };
 
+    /** @brief Refreshes a resident HIR entry in the queue and adds it to the stack. */
     AccessResult<DataT> non_stack_hir_hit(Entry& entry) {
         move_to_pool_head(hir_queue_, entry.queue_it_.value());
         
@@ -149,6 +176,7 @@ private:
         return {*entry.data_, HitStatus::HIT};
     }
 
+    /** @brief Loads an LIR entry while the initial LIR quota is not filled. */
     template <typename FuncT>
     AccessResult<DataT> lirs_filling(const KeyT& key, FuncT& loader) {
         
@@ -165,6 +193,7 @@ private:
         return {*entry.data_, HitStatus::MISS};
     }
 
+    /** @brief Loads a new HIR entry, evicting a resident HIR entry if full. */
     template <typename FuncT>
     AccessResult<DataT> miss(const KeyT& key, FuncT& loader) {
         if(cache_is_full())
@@ -183,6 +212,7 @@ private:
         return {*entry.data_, HitStatus::MISS};
     }
 
+    /** @brief Reloads a ghost entry as LIR and demotes the bottom LIR entry. */
     template <typename FuncT>
     AccessResult<DataT> ghost_hit(Entry& entry, const KeyT& key, FuncT& loader) {
         if(cache_is_full())
@@ -204,14 +234,17 @@ private:
         return {*entry.data_, HitStatus::MISS};
     }
 
+    /** @brief Returns whether the iterator is at the bottom of the nonempty stack. */
     bool in_stack_bottom(PoolIterT stack_it) {
         return stack_it == std::prev(recency_stack_.end());
     }
 
+    /** @brief Moves an entry to the head of its pool without invalidating its iterator. */
     void move_to_pool_head(PoolT& pool, PoolIterT stack_it) {
         pool.splice(pool.begin(), pool, stack_it);
     }
 
+    /** @brief Removes bottom HIR entries until the stack bottom is LIR or the stack is empty. */
     void stack_prune() {
         while(!recency_stack_.empty()) {
             Entry& entry = *recency_stack_.back();
@@ -228,6 +261,7 @@ private:
         }
     }
 
+    /** @brief Removes a queued HIR entry and marks it as LIR. */
     void remove_from_queue(Entry& entry) {
         hir_queue_.erase(entry.queue_it_.value());
         entry.queue_it_ = std::nullopt;
@@ -235,16 +269,19 @@ private:
         --hir_size_;
     }
 
+    /** @brief Demotes the bottom stack entry to HIR and adds it to the queue. */
     void move_bottom_stack_to_queue() {
         Entry& stack_entry = *recency_stack_.back();
         add_to_queue_head(stack_entry);
         stack_entry.status_ = Status::HIR;
     }
 
+    /** @brief Returns whether the resident entry count equals capacity. */
     bool cache_is_full(){
         return lir_size_ + hir_size_ == cache_capacity_;
     }
 
+    /** @brief Creates an entry and stores a pointer to its key in the entry table. */
     Entry& add_new_entry(const KeyT& key) {
         auto [entry_it, inserted] = entries_.emplace(key, Entry{});
 
@@ -256,6 +293,7 @@ private:
         return entry_it->second;
     }
 
+    /** @brief Evicts the tail of the nonempty HIR queue, retaining stack history if present. */
     void evict_hir() {
         Entry& queue_entry = *hir_queue_.back();
         hir_queue_.pop_back();
@@ -269,6 +307,7 @@ private:
             entries_.erase(*queue_entry.key_);
     }
 
+    /** @brief Adds an entry to the stack head, trimming ghost history at the stack limit. */
     void add_to_stack_head(Entry& entry) {
         if(recency_stack_.size() == max_stack_capacity_)
             remove_ghost_from_stack();
@@ -277,12 +316,14 @@ private:
         entry.stack_it_ = recency_stack_.begin();
     }
     
+    /** @brief Adds an entry to the HIR queue head and increments the resident HIR count. */
     void add_to_queue_head(Entry& entry) {
         hir_queue_.emplace_front(std::addressof(entry));
         entry.queue_it_ = hir_queue_.begin();
         ++hir_size_;
     }
 
+    /** @brief Removes the oldest nonresident stack entry, if present. */
     void remove_ghost_from_stack() {
         for(auto it = recency_stack_.rbegin(), end = recency_stack_.rend();
             it != end; ++it) {

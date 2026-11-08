@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @file arc.hpp
- * @brief Declaration and implementation of the ARC cache class.
+ * @brief Declaration and implementation of the ARC cache.
  ******************************************************************************/
 
 #pragma once
@@ -20,27 +20,20 @@ namespace cache {
 
 /**
  * @class ARC
- * @brief Adaptive Replacement Cache (ARC) implementation.
- *
- * @tparam KeyT  Type used to identify cached entries.
- * @tparam DataT Type of data stored in the cache.
- * 
- * The cache dynamically balances between recently accessed and frequently
- * accessed entries using four LRU-ordered lists.
- *
- * @note Notation:  x - current element;
- *                  p - adaptive coefficient;
- *                 T1 - recently accessed entries stored in the cache;
- *                 T2 - frequently accessed entries stored in the cache;
- *                 B1 - ghost entries recently removed from T1;
- *                 B2 - ghost entries recently removed from T2.
- *
- * The algorithm was completely taken from the original article about the ARC cache:
- * https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache
+ * @brief Adaptive Replacement Cache balancing recency and frequency.
+ * @tparam KeyT Hashable, equality-comparable key type.
+ * @tparam DataT Default-constructible cached data type.
+ * @note Copying and moving are disabled.
+ * @see https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache
  */
 template <typename KeyT, typename DataT>
 class ARC {
 public:
+    /**
+     * @brief Creates a cache with the given resident capacity.
+     * @param size Maximum number of resident entries.
+     * @throws std::invalid_argument If size <= 1.
+     */
     explicit ARC(std::size_t size) : cache_size_(size)
     {
         if(size <= 1)
@@ -58,16 +51,11 @@ public:
     using data_t = DataT;
 
     /**
-     * @brief Looks up a key in the ARC cache and updates the cache state.
-     * 
-     * @tparam FuncT Type of the data-loading callable.
-     *
-     * @param key Key of the requested cache entry.
-     * @param loader Callable used to load data on a cache miss.
-     *
-     * @return true if the requested data was already present in T1 or T2;
-     *         false otherwise.   
-    */
+     * @brief Looks up a key and updates the replacement state.
+     * @param key Key of the requested entry.
+     * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
+     * @return Cached data by reference and HIT or MISS; see AccessResult.
+     */
     template <typename FuncT>
     AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader) {
         auto entry_it = entries_table_.find(key);
@@ -91,11 +79,13 @@ private:
 
     enum Pools { T1, T2, B1, B2 };
 
+    /** @brief Resident or ghost entry with its pool position. */
     struct Entry {
         std::unique_ptr<DataT> data_;
         IterT it_;
         Pools pool_;
 
+        /** @brief Creates an entry with its data, pool and list position. */
         Entry(DataptrT data, Pools pool, IterT it) : 
             data_(std::move(data)), it_(it), pool_(pool)
         {}
@@ -121,6 +111,7 @@ private:
      */
     std::size_t p_coeff_ = 0;
 
+    /** @brief Promotes a resident entry to the MRU position of T2. */
     AccessResult<DataT> case_I(Entry& entry)
     { 
         auto& src = entry.pool_ == Pools::T1 ? T1_ : T2_;
@@ -132,6 +123,7 @@ private:
         return {*entry.data_, HitStatus::HIT};
     }
 
+    /** @brief Handles a B1 ghost hit and increases the target size of T1. */
     template <typename FuncT>
     AccessResult<DataT> case_II(Entry& entry, const KeyT& key, FuncT& loader)
     {
@@ -147,6 +139,7 @@ private:
         return {*entry.data_, HitStatus::MISS};
     }
 
+    /** @brief Handles a B2 ghost hit and decreases the target size of T1. */
     template <typename FuncT>
     AccessResult<DataT> case_III(Entry& entry, const KeyT& key, FuncT& loader)
     {
@@ -162,6 +155,7 @@ private:
         return {*entry.data_, HitStatus::MISS};
     }
 
+    /** @brief Makes room and loads a previously unseen key into T1. */
     template <typename FuncT>
     AccessResult<DataT> case_IV(const KeyT& key, FuncT& loader)
     {
@@ -175,6 +169,7 @@ private:
         return {*entry_it->second.data_, HitStatus::MISS};
     }
 
+    /** @brief Makes room when T1 and B1 together reach cache capacity. */
     void case_IV_A()
     {
         if(T1_.size() < cache_size_) {
@@ -188,6 +183,7 @@ private:
         
     }
 
+    /** @brief Trims history and replaces a resident entry when needed. */
     void case_IV_B()
     {
         assert((T1_.size() + B1_.size()) < cache_size_);
@@ -203,6 +199,7 @@ private:
         }
     }
 
+    /** @brief Evicts a resident entry to B1 or B2 using the adaptive target. */
     void replace(bool incoming_from_b2)
     {
         if(!T1_.empty() && (T1_.size() > p_coeff_ ||
@@ -214,6 +211,7 @@ private:
             evict_to_ghost_pool(T2_, B2_, Pools::B2);
     }
 
+    /** @brief Creates and loads an entry at the MRU position of T1. */
     template <typename FuncT>
     auto add_entry(const KeyT& key, FuncT& loader)
     {
@@ -234,6 +232,7 @@ private:
         return entry_it;
     }
 
+    /** @brief Reloads a ghost entry and moves it to the MRU position of T2. */
     template <typename FuncT>
     void return_from_ghost_pool(Entry& entry, const KeyT& key,
         FuncT& loader, PoolT& src)
@@ -246,6 +245,7 @@ private:
         loader(key, *entry.data_);
     }
 
+    /** @brief Removes the LRU entry from a nonempty pool and the entry table. */
     void remove_lru_from_cache(PoolT& src)
     {
         assert(!src.empty());
@@ -255,6 +255,7 @@ private:
         src.pop_back();
     }
 
+    /** @brief Moves the LRU entry of a nonempty pool to a ghost pool and releases its data. */
     void evict_to_ghost_pool(PoolT& src, PoolT& dest, const Pools dest_name)
     {
         assert(!src.empty());

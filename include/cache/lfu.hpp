@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @file lfu.hpp
- * @brief Declaration and implementation of the LFU cache algorithm.
+ * @brief Declaration and implementation of the LFU cache.
  ******************************************************************************/
 
 #pragma once
@@ -14,9 +14,21 @@
 
 namespace cache {
 
+/**
+ * @class LFU
+ * @brief Least Frequently Used cache with LRU tie-breaking.
+ * @tparam KeyT Hashable, equality-comparable key type.
+ * @tparam DataT Default-constructible cached data type.
+ * @note Copying and moving are disabled.
+ */
 template <typename KeyT, typename DataT>
 class LFU {
 public:
+    /**
+     * @brief Creates a cache with the given resident capacity.
+     * @param capacity Maximum number of resident entries.
+     * @throws std::invalid_argument If capacity <= 1.
+     */
     explicit LFU(std::size_t capacity) :
         freq_list_(), capacity_(capacity)
     {
@@ -35,6 +47,12 @@ public:
     using key_t = KeyT;
     using data_t = DataT;
 
+    /**
+     * @brief Looks up a key and updates the replacement state.
+     * @param key Key of the requested entry.
+     * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
+     * @return Cached data by reference and HIT or MISS; see AccessResult.
+     */
     template <typename FuncT>
     AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
     {
@@ -50,21 +68,25 @@ private:
 
     struct ElemInfo;
 
+    /** @brief Access-frequency bucket ordered from MRU to LRU. */
     struct FreqBucket {
         std::list<ElemInfo> elem_list{};
         std::size_t counter;
 
+        /** @brief Creates an empty bucket for the given access frequency. */
         FreqBucket(std::size_t cnt) : counter(cnt) {}
     };
 
     using FreqBucketIt = typename std::list<FreqBucket>::iterator;
 
     using DataTptr = std::unique_ptr<DataT>;
+    /** @brief Resident entry with its key and parent frequency bucket. */
     struct ElemInfo {
         DataTptr data;
         KeyT key;
         FreqBucketIt parent;
 
+        /** @brief Creates an entry with its data, key and frequency bucket. */
         ElemInfo(DataTptr d, const KeyT& k, FreqBucketIt p) :
             data(std::move(d)), key(k), parent(p)
         {}
@@ -78,8 +100,10 @@ private:
 
     std::size_t capacity_;
 
+    /** @brief Returns whether the resident entry count equals capacity. */
     bool is_full() const noexcept { return capacity_ == entries_.size(); }
 
+    /** @brief Loads a missing key, evicting the LRU entry of the lowest-frequency bucket if full. */
     template <typename FuncT>
     AccessResult<DataT> request(const KeyT& key, FuncT& loader) {
         if(is_full()) {
@@ -116,6 +140,7 @@ private:
         return {data, HitStatus::MISS};
     }
 
+    /** @brief Increments access frequency and moves the entry to its new bucket. */
     AccessResult<DataT> access_cached(EntryIt entry_it) {
         // create new frequency bucket if it not created
         auto freq_it = entry_it->second->parent;
@@ -139,6 +164,6 @@ private:
         return {*entry_it->second->data, HitStatus::HIT};
     }
 
-}; // class Lfu
+}; // class LFU
 
 } // namespace cache
