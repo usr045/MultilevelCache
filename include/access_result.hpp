@@ -18,8 +18,8 @@ enum HitStatus : bool {MISS=false, HIT=true};
  */
 template <typename DataT>
 struct AccessResult {
-    const DataT& data; ///< Read-only reference to cache-owned data.
-    HitStatus status; ///< HIT for resident data; MISS when loading was required.
+    const DataT& data; // Read-only reference to cache-owned data.
+    HitStatus status; // HIT for resident data; MISS when loading was required.
 };
 
 } // namespace cache
