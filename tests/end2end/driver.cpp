@@ -5,9 +5,7 @@
 #include <string_view>
 
 #include "cache/arc.hpp"
-#if 0
-    #include "cache/lirs.hpp"
-#endif
+#include "cache/lirs.hpp"
 #include "cache/lfu.hpp"
 #include "cache/two_q.hpp"
 
@@ -52,9 +50,6 @@ int run_tests(FuncT& loader)
         if(result.status) {
             std::cout << "h"; // cache hit 
             ++hits;
-
-            // DEBUG
-            
         }
         else
             std::cout << "m"; // cache miss
@@ -75,8 +70,8 @@ int main(int argc, char** argv)
     if(algorithm == "arc")
         return run_tests<ARC<KeyT, DataT>>(cache_user::slow_get_page);
 
-    // else if(algorithm == "lirs")
-        // return run_tests<LirsCache<KeyT, DataT>>(cache_user::slow_get_page);   
+    else if(algorithm == "lirs")
+        return run_tests<LIRS<KeyT, DataT>>(cache_user::slow_get_page);   
 
     else if(algorithm == "lfu")
         return run_tests<LFU<KeyT, DataT>>(cache_user::slow_get_page);

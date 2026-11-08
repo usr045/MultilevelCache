@@ -2,6 +2,7 @@ set(CACHE_ALGORITHMS
     arc
     two_q
     lfu
+    lirs
 )
 
 set(END2END_TEST_GROUPS
@@ -18,7 +19,6 @@ target_link_libraries(cache_end2end_driver PRIVATE
 )
 
 enable_warnings(cache_end2end_driver)
-
 
 function(add_cache_end2end_tests cache_name)
     foreach(group_name IN LISTS END2END_TEST_GROUPS)

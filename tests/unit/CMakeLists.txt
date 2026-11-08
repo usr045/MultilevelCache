@@ -17,6 +17,6 @@ function(add_unit_tests target lib_name)
 endfunction()
 
 add_unit_tests(arc_unit_tests  arc)
-# add_unit_tests(lirs_unit_tests lirs)
+add_unit_tests(lirs_unit_tests lirs)
 add_unit_tests(lfu_unit_tests lfu)
 add_unit_tests(two_q_unit_tests two_q)
