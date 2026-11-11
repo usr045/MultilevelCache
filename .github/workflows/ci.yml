@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Code style
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
+      - name: Install formatting tools
+        run: python -m pip install -r .github/requirements-ci.txt
+      - name: Check formatting
+        id: format
+        run: git ls-files -z -- '*.cpp' '*.hpp' | xargs -0 -r clang-format --style=file --dry-run --Werror
+      - name: Prepare formatting patch
+        if: failure() && steps.format.outcome == 'failure'
+        run: |
+          git ls-files -z -- '*.cpp' '*.hpp' | xargs -0 -r clang-format --style=file -i
+          git diff --binary > "$RUNNER_TEMP/clang-format.patch"
+      - name: Upload formatting patch
+        if: failure() && steps.format.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: clang-format-fixes
+          path: ${{ runner.temp }}/clang-format.patch
+          if-no-files-found: ignore
+          retention-days: 7
+
+  tests:
+    name: Tests (${{ matrix.preset }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [release, debug-sanitize]
+    env:
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ ninja-build libgtest-dev
+          python -m pip install -r .github/requirements-ci.txt
+      - name: Configure
+        run: cmake --preset "${{ matrix.preset }}"
+      - name: Build
+        run: cmake --build --preset "${{ matrix.preset }}" --parallel 2
+      - name: Run all tests
+        run: >-
+          ctest --preset "${{ matrix.preset }}" --parallel 2
+          --output-junit "$PWD/build/${{ matrix.preset }}/test-results.xml"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.preset }}
+          path: |
+            build/${{ matrix.preset }}/test-results.xml
+            build/${{ matrix.preset }}/Testing/Temporary/
+            build/${{ matrix.preset }}/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: ignore
+          retention-days: 7
