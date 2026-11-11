@@ -18,18 +18,16 @@ namespace cache {
  * @tparam KeyT Cache key type.
  * @tparam DataT Cached data type.
  */
-template <typename KeyT, typename DataT>
-class Belady {
+template <typename KeyT, typename DataT> class Belady {
 public:
     /**
      * @brief Creates a cache with the given resident capacity.
      * @param capacity Maximum number of resident entries.
      * @throws std::invalid_argument If capacity <= 2.
      */
-    explicit Belady(std::size_t capacity) :
-        cache_capacity_(capacity)
+    explicit Belady(std::size_t capacity) : cache_capacity_(capacity)
     {
-        if(capacity <= 2)
+        if (capacity <= 2)
             throw std::invalid_argument("Belady cache capacity must be "
                                         "greater than 1");
     }
@@ -38,14 +36,10 @@ public:
     using data_t = DataT;
 
     /** @brief Unimplemented request placeholder; performs no lookup or loading. */
-    template<typename FuncT>
-    void lookup_update(KeyT key) {
-        
-    }
+    template <typename FuncT> void lookup_update(KeyT key) {}
 
 private:
     std::size_t cache_capacity_;
-
 
 }; // class Belady
 

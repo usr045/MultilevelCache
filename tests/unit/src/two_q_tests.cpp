@@ -182,8 +182,8 @@ TEST(AmTest, AmVictimIsNotRememberedAsGhost)
     unit_tests::Trace<TwoQ<int, int>> trace{4};
     fill_am(trace);
 
-    trace.request(9, 901, HitStatus::MISS);   // evicts 2 from Am
-    trace.request(2, 203, HitStatus::MISS);   // plain miss: 2 -> A1in
+    trace.request(9, 901, HitStatus::MISS); // evicts 2 from Am
+    trace.request(2, 203, HitStatus::MISS); // plain miss: 2 -> A1in
     trace.request(1, 102, HitStatus::HIT);
     trace.request(10, 1001, HitStatus::MISS);
     trace.request(11, 1101, HitStatus::MISS); // 2 -> A1out
@@ -208,3 +208,7 @@ TEST(TypesTest, WorksWithStringKeysAndValues)
 }
 
 } // anonymous namespace
+
+#ifdef SANITIZE
+int a = 4;
+#endif

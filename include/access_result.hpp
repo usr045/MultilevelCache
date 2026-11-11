@@ -8,7 +8,7 @@
 namespace cache {
 
 /** @brief Whether the requested data was resident before the lookup. */
-enum HitStatus : bool {MISS=false, HIT=true};
+enum HitStatus : bool { MISS = false, HIT = true };
 
 /**
  * @brief Non-owning result of a cache lookup.
@@ -16,10 +16,9 @@ enum HitStatus : bool {MISS=false, HIT=true};
  * @note data remains valid until its entry is evicted or the cache is destroyed.
  *       Copying this result does not copy data or extend its lifetime.
  */
-template <typename DataT>
-struct AccessResult {
+template <typename DataT> struct AccessResult {
     const DataT& data; // Read-only reference to cache-owned data.
-    HitStatus status; // HIT for resident data; MISS when loading was required.
+    HitStatus status;  // HIT for resident data; MISS when loading was required.
 };
 
 } // namespace cache

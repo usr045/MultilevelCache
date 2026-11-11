@@ -23,20 +23,18 @@ namespace cache {
  * @tparam DataT Default-constructible cached data type.
  * @note Copying and moving are disabled.
  */
-template <typename KeyT, typename DataT>
-class TwoQ {
+template <typename KeyT, typename DataT> class TwoQ {
 public:
     /**
      * @brief Creates a cache with the given resident capacity.
      * @param cache_size Maximum number of resident entries.
      * @throws std::invalid_argument If cache_size <= 1.
      */
-    explicit TwoQ(std::size_t cache_size) :
-        K_in_(std::max<std::size_t>(1, cache_size / 4)),
-        K_out_(std::max<std::size_t>(1, cache_size / 2)),
-        free_slots_(cache_size)
+    explicit TwoQ(std::size_t cache_size)
+        : K_in_(std::max<std::size_t>(1, cache_size / 4)),
+          K_out_(std::max<std::size_t>(1, cache_size / 2)), free_slots_(cache_size)
     {
-        if(cache_size <= 1)
+        if (cache_size <= 1)
             throw std::invalid_argument("");
     }
 
@@ -55,18 +53,17 @@ public:
      * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
      * @return Cached data by reference and HIT or MISS; see AccessResult.
      */
-    template <typename FuncT>
-    AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
+    template <typename FuncT> AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
     {
         auto entry = entries_table_.find(key);
 
-        if(entry == entries_table_.end())
+        if (entry == entries_table_.end())
             return case_nowhere(key, loader);
-        
-        else if(entry->second.pool_ == Pools::Am)
+
+        else if (entry->second.pool_ == Pools::Am)
             return case_in_am(entry->second);
 
-        else if(entry->second.pool_ == Pools::A1_in)
+        else if (entry->second.pool_ == Pools::A1_in)
             return {*entry->second.data_, HitStatus::HIT};
 
         return case_in_a1_out(entry->second, key, loader);
@@ -86,9 +83,7 @@ private:
         Pools pool_;
 
         /** @brief Creates an entry with its data, list position and pool. */
-        Entry(DataptrT data, IterT it, Pools pool) :
-            data_(std::move(data)), it_(it), pool_(pool)
-        {}
+        Entry(DataptrT data, IterT it, Pools pool) : data_(std::move(data)), it_(it), pool_(pool) {}
     };
 
     std::list<KeyT> A1_in_{}, A1_out_{}, Am_{};
@@ -110,13 +105,12 @@ private:
     {
         reclaimfor(key);
         return_from_ghost(entry, key, loader);
-        
+
         return {*entry.data_, HitStatus::MISS};
     }
 
     /** @brief Makes room and loads a previously unseen key into A1_in. */
-    template <typename FuncT>
-    AccessResult<DataT> case_nowhere(const KeyT& key, FuncT& loader)
+    template <typename FuncT> AccessResult<DataT> case_nowhere(const KeyT& key, FuncT& loader)
     {
         reclaimfor(key);
         auto entry_it = add_new(key, loader);
@@ -127,18 +121,17 @@ private:
     /** @brief Frees a resident slot and trims ghost history when needed. */
     void reclaimfor(const KeyT& key)
     {
-        if(free_slots_ == 0) {
-            if(A1_in_.size() > K_in_) {
+        if (free_slots_ == 0) {
+            if (A1_in_.size() > K_in_) {
                 evict_tail(A1_in_, A1_out_, Pools::A1_out);
                 ++free_slots_;
-                
-                if(A1_out_.size() > K_out_) {
-                    if(A1_out_.back() != key)
+
+                if (A1_out_.size() > K_out_) {
+                    if (A1_out_.back() != key)
                         evict_tail(A1_out_);
                 }
 
-            }
-            else {
+            } else {
                 evict_tail(Am_);
                 ++free_slots_;
             }
@@ -146,20 +139,15 @@ private:
     }
 
     /** @brief Creates and loads an entry at the head of A1_in. */
-    template <typename FuncT>
-    auto add_new(const KeyT& key, FuncT& loader)
+    template <typename FuncT> auto add_new(const KeyT& key, FuncT& loader)
     {
         A1_in_.emplace_front(key);
 
-        auto [entry_it,  inserted] = 
-            entries_table_.try_emplace(
-                key, 
-                std::make_unique<DataT>(),
-                A1_in_.begin(),
-                Pools::A1_in
-            );
+        auto [entry_it, inserted] = entries_table_.try_emplace(key, std::make_unique<DataT>(),
+                                                               A1_in_.begin(), Pools::A1_in);
 
-        if(!inserted) throw std::runtime_error("Not enough memory to add new entry");
+        if (!inserted)
+            throw std::runtime_error("Not enough memory to add new entry");
 
         --free_slots_;
         loader(key, *entry_it->second.data_);
@@ -168,8 +156,7 @@ private:
     }
 
     /** @brief Reloads a ghost entry into Am and consumes a free slot. */
-    template <typename FuncT>
-    void return_from_ghost(Entry& entry, const KeyT& key, FuncT& loader)
+    template <typename FuncT> void return_from_ghost(Entry& entry, const KeyT& key, FuncT& loader)
     {
         Am_.splice(Am_.begin(), A1_out_, entry.it_);
         entry.pool_ = Pools::Am;
@@ -190,7 +177,7 @@ private:
     void evict_tail(PoolT& src, PoolT& dest, const Pools poolname)
     {
         dest.splice(dest.begin(), src, std::prev(src.end()));
-        
+
         auto& entry = entries_table_.at(dest.front());
         entry.pool_ = poolname;
         entry.data_.reset();

@@ -75,7 +75,7 @@ TEST(EvictionTest, ScanPreservesLirEntriesAndBoundsGhostHistory)
 {
     IntTrace trace{3};
     std::vector<int> expected;
-    for(int key = 1; key <= 32; ++key) {
+    for (int key = 1; key <= 32; ++key) {
         trace.request(key, key * 100 + 1, HitStatus::MISS);
         expected.push_back(key);
     }
@@ -98,7 +98,7 @@ TEST(TransitionTest, ResidentStackHirHitPromotesAndDemotesOldestLir)
     trace.request(1, 101, HitStatus::MISS);
     trace.request(2, 201, HitStatus::MISS);
     trace.request(3, 301, HitStatus::MISS);
-    trace.request(3, 301, HitStatus::HIT); // 3 becomes LIR; 1 becomes HIR.
+    trace.request(3, 301, HitStatus::HIT);  // 3 becomes LIR; 1 becomes HIR.
     trace.request(4, 401, HitStatus::MISS); // Evicts 1.
     trace.request(2, 201, HitStatus::HIT);
     trace.request(3, 301, HitStatus::HIT);
@@ -128,8 +128,8 @@ TEST(TransitionTest, NonStackHirRequiresAnotherHitBeforePromotion)
     trace.request(2, 201, HitStatus::MISS);
     trace.request(3, 301, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
-    trace.request(2, 201, HitStatus::HIT); // Prunes resident HIR 3 from the stack.
-    trace.request(3, 301, HitStatus::HIT); // Restores stack membership, still HIR.
+    trace.request(2, 201, HitStatus::HIT);  // Prunes resident HIR 3 from the stack.
+    trace.request(3, 301, HitStatus::HIT);  // Restores stack membership, still HIR.
     trace.request(4, 401, HitStatus::MISS); // Evicts 3.
     trace.request(3, 302, HitStatus::MISS);
     EXPECT_EQ(trace.loaded_keys(), (std::vector<int>{1, 2, 3, 4, 3}));
@@ -159,7 +159,7 @@ TEST(TransitionTest, PrunedGhostReturnsAsNewHir)
     trace.request(3, 301, HitStatus::MISS);
     trace.request(4, 401, HitStatus::MISS);
     trace.request(1, 101, HitStatus::HIT);
-    trace.request(2, 201, HitStatus::HIT); // Forgets ghost 3 during stack pruning.
+    trace.request(2, 201, HitStatus::HIT);  // Forgets ghost 3 during stack pruning.
     trace.request(3, 302, HitStatus::MISS); // New HIR, not a ghost promotion.
     trace.request(5, 501, HitStatus::MISS); // Evicts 3 again.
     trace.request(3, 303, HitStatus::MISS);
@@ -170,11 +170,11 @@ TEST(EvictionTest, NonStackHirHitRefreshesQueueRecency)
 {
     IntTrace trace{200}; // Two HIR slots.
     std::vector<int> expected;
-    for(int key = 1; key <= 200; ++key) {
+    for (int key = 1; key <= 200; ++key) {
         trace.request(key, key * 100 + 1, HitStatus::MISS);
         expected.push_back(key);
     }
-    for(int key = 1; key <= 198; ++key)
+    for (int key = 1; key <= 198; ++key)
         trace.request(key, key * 100 + 1, HitStatus::HIT);
     trace.request(199, 19901, HitStatus::HIT);
     trace.request(201, 20101, HitStatus::MISS); // Evicts 200 rather than 199.

@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include <stdexcept>
 #include <list>
 #include <memory>
+#include <stdexcept>
 #include <unordered_map>
 
 #include "access_result.hpp"
@@ -21,18 +21,16 @@ namespace cache {
  * @tparam DataT Default-constructible cached data type.
  * @note Copying and moving are disabled.
  */
-template <typename KeyT, typename DataT>
-class LFU {
+template <typename KeyT, typename DataT> class LFU {
 public:
     /**
      * @brief Creates a cache with the given resident capacity.
      * @param capacity Maximum number of resident entries.
      * @throws std::invalid_argument If capacity <= 1.
      */
-    explicit LFU(std::size_t capacity) :
-        freq_list_(), capacity_(capacity)
+    explicit LFU(std::size_t capacity) : freq_list_(), capacity_(capacity)
     {
-        if(capacity <= 1) 
+        if (capacity <= 1)
             throw std::invalid_argument("LFU cache size must be greater "
                                         "than one");
         entries_.reserve(capacity);
@@ -53,19 +51,17 @@ public:
      * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
      * @return Cached data by reference and HIT or MISS; see AccessResult.
      */
-    template <typename FuncT>
-    AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
+    template <typename FuncT> AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
     {
         auto entry_it = entries_.find(key);
 
-        if(entry_it == entries_.end())
+        if (entry_it == entries_.end())
             return request(key, loader);
-         
+
         return access_cached(entry_it);
     }
 
 private:
-
     struct ElemInfo;
 
     /** @brief Access-frequency bucket ordered from MRU to LRU. */
@@ -87,9 +83,9 @@ private:
         FreqBucketIt parent;
 
         /** @brief Creates an entry with its data, key and frequency bucket. */
-        ElemInfo(DataTptr d, const KeyT& k, FreqBucketIt p) :
-            data(std::move(d)), key(k), parent(p)
-        {}
+        ElemInfo(DataTptr d, const KeyT& k, FreqBucketIt p) : data(std::move(d)), key(k), parent(p)
+        {
+        }
     };
 
     using ElemInfoIt = typename std::list<ElemInfo>::iterator;
@@ -104,50 +100,45 @@ private:
     bool is_full() const noexcept { return capacity_ == entries_.size(); }
 
     /** @brief Loads a missing key, evicting the LRU entry of the lowest-frequency bucket if full. */
-    template <typename FuncT>
-    AccessResult<DataT> request(const KeyT& key, FuncT& loader) {
-        if(is_full()) {
+    template <typename FuncT> AccessResult<DataT> request(const KeyT& key, FuncT& loader)
+    {
+        if (is_full()) {
             auto& lfu_elem_list = freq_list_.front().elem_list;
             entries_.erase(lfu_elem_list.back().key); // delete entry from entries
-            lfu_elem_list.pop_back(); // delete elem from list
+            lfu_elem_list.pop_back();                 // delete elem from list
 
             // delete frequency bucket if list has not elems
-            if(freq_list_.front().elem_list.empty())
+            if (freq_list_.front().elem_list.empty())
                 freq_list_.erase(freq_list_.begin());
         }
 
-        if(freq_list_.empty() || freq_list_.front().counter != 1)
+        if (freq_list_.empty() || freq_list_.front().counter != 1)
             freq_list_.emplace_front(1);
 
         // add to FreqBucket
         auto& elem_list = freq_list_.begin()->elem_list;
 
-        elem_list.emplace_front(
-            std::make_unique<DataT>(),
-            key,
-            freq_list_.begin()
-        );
+        elem_list.emplace_front(std::make_unique<DataT>(), key, freq_list_.begin());
 
         // load data
-        auto& data = *elem_list.begin()->data; 
+        auto& data = *elem_list.begin()->data;
         loader(key, data);
 
         // add to entries_table
-        entries_.emplace(
-            key, elem_list.begin()
-        );
+        entries_.emplace(key, elem_list.begin());
 
         return {data, HitStatus::MISS};
     }
 
     /** @brief Increments access frequency and moves the entry to its new bucket. */
-    AccessResult<DataT> access_cached(EntryIt entry_it) {
+    AccessResult<DataT> access_cached(EntryIt entry_it)
+    {
         // create new frequency bucket if it not created
         auto freq_it = entry_it->second->parent;
         auto next_freq_it = std::next(freq_it);
         auto counter = freq_it->counter;
 
-        if(next_freq_it == freq_list_.end() || next_freq_it->counter != counter + 1) {
+        if (next_freq_it == freq_list_.end() || next_freq_it->counter != counter + 1) {
             next_freq_it = freq_list_.emplace(next_freq_it, counter + 1);
         }
 
@@ -158,9 +149,9 @@ private:
         next_elem_list.splice(next_elem_list.begin(), current_elem_list, entry_it->second);
         entry_it->second->parent = next_freq_it;
 
-        if(freq_it->elem_list.empty())
+        if (freq_it->elem_list.empty())
             freq_list_.erase(freq_it);
-    
+
         return {*entry_it->second->data, HitStatus::HIT};
     }
 

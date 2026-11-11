@@ -20,7 +20,7 @@ TEST(ConstructorTest, AcceptsPositiveCacheSize)
 }
 
 TEST(ConstructorTest, RejectZeroCacheSize)
-{    
+{
     using ARC = ARC<int, int>;
 
     EXPECT_THROW(ARC{0}, std::invalid_argument);
@@ -40,8 +40,8 @@ TEST(LookupUpdateTest, AllMisses)
     EXPECT_EQ(trace.loaded_keys(), expected_loaded_keys);
 }
 
-
-TEST(TransitionTest, FullT1RemovesOldestKey) {
+TEST(TransitionTest, FullT1RemovesOldestKey)
+{
     unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
@@ -55,7 +55,8 @@ TEST(TransitionTest, FullT1RemovesOldestKey) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(TransitionTest, ReturnFromB1ReloadsAndReplacesFromT2) {
+TEST(TransitionTest, ReturnFromB1ReloadsAndReplacesFromT2)
+{
     unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
@@ -70,7 +71,8 @@ TEST(TransitionTest, ReturnFromB1ReloadsAndReplacesFromT2) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(TransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim) {
+TEST(TransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim)
+{
     unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
@@ -86,7 +88,8 @@ TEST(TransitionTest, ReturnFromB2ReloadsAndAffectsNextVictim) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(TransitionTest, HitInT2UpdatesRecency) {
+TEST(TransitionTest, HitInT2UpdatesRecency)
+{
     unit_tests::Trace<ARC<int, int>> trace{3};
 
     trace.request(1, 101, HitStatus::MISS);
@@ -104,7 +107,8 @@ TEST(TransitionTest, HitInT2UpdatesRecency) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(TransitionTest, B2ReturnUsesEqualityCaseInReplace) {
+TEST(TransitionTest, B2ReturnUsesEqualityCaseInReplace)
+{
     unit_tests::Trace<ARC<int, int>> trace{3};
 
     trace.request(1, 101, HitStatus::MISS);
@@ -121,7 +125,8 @@ TEST(TransitionTest, B2ReturnUsesEqualityCaseInReplace) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(TransitionTest, RemovesOldestB1Ghost) {
+TEST(TransitionTest, RemovesOldestB1Ghost)
+{
     unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);
@@ -136,7 +141,8 @@ TEST(TransitionTest, RemovesOldestB1Ghost) {
     EXPECT_EQ(trace.loaded_keys(), expected);
 }
 
-TEST(TransitionTest, RemovesOldestB2Ghost) {
+TEST(TransitionTest, RemovesOldestB2Ghost)
+{
     unit_tests::Trace<ARC<int, int>> trace{2};
 
     trace.request(1, 101, HitStatus::MISS);

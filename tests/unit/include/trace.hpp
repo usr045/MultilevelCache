@@ -3,7 +3,7 @@
  * @brief Shared cache request assertions and loader history.
  ******************************************************************************/
 
- #pragma once
+#pragma once
 
 #include <cstddef>
 #include <string>
@@ -19,8 +19,7 @@ namespace cache::unit_tests {
 void load_data(int key, int load_count, int& data);
 void load_data(const std::string& key, int load_count, std::string& data);
 
-template <typename CacheT>
-class Trace {
+template <typename CacheT> class Trace {
 public:
     using KeyT = typename CacheT::key_t;
     using DataT = typename CacheT::data_t;
@@ -29,8 +28,7 @@ public:
 
     const std::vector<KeyT>& loaded_keys() const { return loaded_keys_; }
 
-    AccessResult<DataT> request(const KeyT& key, const DataT& expected_data,
-                                HitStatus expected_hit)
+    AccessResult<DataT> request(const KeyT& key, const DataT& expected_data, HitStatus expected_hit)
     {
         Loader loader{*this};
 
