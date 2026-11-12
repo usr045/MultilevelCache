@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <functional>
 #include <list>
 #include <memory>
 #include <stdexcept>
@@ -45,13 +46,15 @@ public:
     using key_t = KeyT;
     using data_t = DataT;
 
+    using LoaderT = std::function<void(const KeyT&, DataT&)>;
+
     /**
      * @brief Looks up a key and updates the replacement state.
      * @param key Key of the requested entry.
-     * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
+     * @param loader  LoaderT (std::function<void(const KeyT&, DataT&)>)
      * @return Cached data by reference and HIT or MISS; see AccessResult.
      */
-    template <typename FuncT> AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader)
     {
         auto entry_it = entries_.find(key);
 
@@ -100,7 +103,7 @@ private:
     bool is_full() const noexcept { return capacity_ == entries_.size(); }
 
     /** @brief Loads a missing key, evicting the LRU entry of the lowest-frequency bucket if full. */
-    template <typename FuncT> AccessResult<DataT> request(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> request(const KeyT& key, const LoaderT& loader)
     {
         if (is_full()) {
             auto& lfu_elem_list = freq_list_.front().elem_list;

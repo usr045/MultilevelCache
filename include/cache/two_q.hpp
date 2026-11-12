@@ -6,6 +6,7 @@
 #pragma once
 
 #include <algorithm>
+#include <functional>
 #include <list>
 #include <memory>
 #include <stdexcept>
@@ -47,13 +48,15 @@ public:
     using key_t = KeyT;
     using data_t = DataT;
 
+    using LoaderT = std::function<void(const KeyT&, DataT&)>;
+
     /**
      * @brief Looks up a key and updates the replacement state.
      * @param key Key of the requested entry.
-     * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
+     * @param loader  LoaderT (std::function<void(const KeyT&, DataT&)>)
      * @return Cached data by reference and HIT or MISS; see AccessResult.
      */
-    template <typename FuncT> AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader)
     {
         auto entry = entries_table_.find(key);
 
@@ -100,8 +103,7 @@ private:
     }
 
     /** @brief Makes room and reloads an A1_out ghost entry into Am. */
-    template <typename FuncT>
-    AccessResult<DataT> case_in_a1_out(Entry& entry, const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_in_a1_out(Entry& entry, const KeyT& key, const LoaderT& loader)
     {
         reclaimfor(key);
         return_from_ghost(entry, key, loader);
@@ -110,7 +112,7 @@ private:
     }
 
     /** @brief Makes room and loads a previously unseen key into A1_in. */
-    template <typename FuncT> AccessResult<DataT> case_nowhere(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_nowhere(const KeyT& key, const LoaderT& loader)
     {
         reclaimfor(key);
         auto entry_it = add_new(key, loader);
@@ -139,7 +141,7 @@ private:
     }
 
     /** @brief Creates and loads an entry at the head of A1_in. */
-    template <typename FuncT> auto add_new(const KeyT& key, FuncT& loader)
+    auto add_new(const KeyT& key, const LoaderT& loader)
     {
         A1_in_.emplace_front(key);
 
@@ -156,7 +158,7 @@ private:
     }
 
     /** @brief Reloads a ghost entry into Am and consumes a free slot. */
-    template <typename FuncT> void return_from_ghost(Entry& entry, const KeyT& key, FuncT& loader)
+    void return_from_ghost(Entry& entry, const KeyT& key, const LoaderT& loader)
     {
         Am_.splice(Am_.begin(), A1_out_, entry.it_);
         entry.pool_ = Pools::Am;

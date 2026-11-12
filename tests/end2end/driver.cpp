@@ -22,7 +22,7 @@ void slow_get_page(const KeyT&, DataT&)
 
 } // namespace cache_user
 
-template <typename CacheT, typename FuncT> int run_tests(FuncT& loader)
+template <typename CacheT, typename LoaderT> int run_tests(LoaderT& loader)
 {
     std::size_t cache_size = 0;
     if (!(std::cin >> cache_size))

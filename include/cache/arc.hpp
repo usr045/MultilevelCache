@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <list>
 #include <memory>
@@ -49,13 +50,15 @@ public:
     using key_t = KeyT;
     using data_t = DataT;
 
+    using LoaderT = std::function<void(const KeyT&, DataT&)>;
+
     /**
      * @brief Looks up a key and updates the replacement state.
      * @param key Key of the requested entry.
-     * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
+     * @param loader  LoaderT (std::function<void(const KeyT&, DataT&)>)
      * @return Cached data by reference and HIT or MISS; see AccessResult.
      */
-    template <typename FuncT> AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader)
     {
         auto entry_it = entries_table_.find(key);
 
@@ -121,8 +124,7 @@ private:
     }
 
     /** @brief Handles a B1 ghost hit and increases the target size of T1. */
-    template <typename FuncT>
-    AccessResult<DataT> case_II(Entry& entry, const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_II(Entry& entry, const KeyT& key, const LoaderT& loader)
     {
         const std::size_t delta1 = B1_.size() >= B2_.size() ? 1 : B2_.size() / B1_.size();
 
@@ -136,8 +138,7 @@ private:
     }
 
     /** @brief Handles a B2 ghost hit and decreases the target size of T1. */
-    template <typename FuncT>
-    AccessResult<DataT> case_III(Entry& entry, const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_III(Entry& entry, const KeyT& key, const LoaderT& loader)
     {
         const std::size_t delta2 = B2_.size() >= B1_.size() ? 1 : B1_.size() / B2_.size();
 
@@ -151,7 +152,7 @@ private:
     }
 
     /** @brief Makes room and loads a previously unseen key into T1. */
-    template <typename FuncT> AccessResult<DataT> case_IV(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> case_IV(const KeyT& key, const LoaderT& loader)
     {
         if ((T1_.size() + B1_.size()) == cache_size_)
             case_IV_A();
@@ -203,7 +204,7 @@ private:
     }
 
     /** @brief Creates and loads an entry at the MRU position of T1. */
-    template <typename FuncT> auto add_entry(const KeyT& key, FuncT& loader)
+    auto add_entry(const KeyT& key, const LoaderT& loader)
     {
         // Put x in MRU T1 and save info in entries table
         T1_.emplace_front(key);
@@ -220,8 +221,7 @@ private:
     }
 
     /** @brief Reloads a ghost entry and moves it to the MRU position of T2. */
-    template <typename FuncT>
-    void return_from_ghost_pool(Entry& entry, const KeyT& key, FuncT& loader, PoolT& src)
+    void return_from_ghost_pool(Entry& entry, const KeyT& key, const LoaderT& loader, PoolT& src)
     {
         // Move x from B1/B2 to the MRU of T2
         T2_.splice(T2_.begin(), src, entry.it_);

@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <stdexcept>
 
 #include "access_result.hpp"
@@ -35,8 +36,9 @@ public:
     using key_t = KeyT;
     using data_t = DataT;
 
-    /** @brief Unimplemented request placeholder; performs no lookup or loading. */
-    template <typename FuncT> void lookup_update(KeyT key) {}
+    using LoaderT = std::function<void(const KeyT&, DataT&)>;
+
+    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader) {}
 
 private:
     std::size_t cache_capacity_;

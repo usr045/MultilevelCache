@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdio>
+#include <functional>
 #include <limits>
 #include <list>
 #include <memory>
@@ -53,13 +54,15 @@ public:
     using key_t = KeyT;
     using data_t = DataT;
 
+    using LoaderT = std::function<void(const KeyT&, DataT&)>;
+
     /**
      * @brief Looks up a key and updates the replacement state.
      * @param key Key of the requested entry.
-     * @param loader Callable loader(const KeyT&, DataT&) that fills data on a miss.
+     * @param loader  LoaderT (std::function<void(const KeyT&, DataT&)>)
      * @return Cached data by reference and HIT or MISS; see AccessResult.
      */
-    template <typename FuncT> AccessResult<DataT> lookup_update(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader)
     {
         EntryIterT entry_it = entries_.find(key);
 
@@ -175,7 +178,7 @@ private:
     }
 
     /** @brief Loads an LIR entry while the initial LIR quota is not filled. */
-    template <typename FuncT> AccessResult<DataT> lirs_filling(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> lirs_filling(const KeyT& key, const LoaderT& loader)
     {
 
         Entry& entry = add_new_entry(key);
@@ -192,7 +195,7 @@ private:
     }
 
     /** @brief Loads a new HIR entry, evicting a resident HIR entry if full. */
-    template <typename FuncT> AccessResult<DataT> miss(const KeyT& key, FuncT& loader)
+    AccessResult<DataT> miss(const KeyT& key, const LoaderT& loader)
     {
         if (cache_is_full())
             evict_hir(); // Evict bottom of HIR queue
@@ -211,8 +214,7 @@ private:
     }
 
     /** @brief Reloads a ghost entry as LIR and demotes the bottom LIR entry. */
-    template <typename FuncT>
-    AccessResult<DataT> ghost_hit(Entry& entry, const KeyT& key, FuncT& loader)
+    AccessResult<DataT> ghost_hit(Entry& entry, const KeyT& key, const LoaderT& loader)
     {
         if (cache_is_full())
             evict_hir(); // Evict bottom of HIR queue
