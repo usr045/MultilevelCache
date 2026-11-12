@@ -10,15 +10,15 @@ set(END2END_TEST_GROUPS
     generated
 )
 
-add_executable(cache_end2end_driver
+add_executable(end2end_tests
     driver.cpp
 )
 
-target_link_libraries(cache_end2end_driver PRIVATE
+target_link_libraries(end2end_tests PRIVATE
     ${CACHE_ALGORITHMS}
 )
 
-enable_warnings(cache_end2end_driver)
+enable_warnings(end2end_tests)
 
 function(add_cache_end2end_tests cache_name)
     foreach(group_name IN LISTS END2END_TEST_GROUPS)
@@ -69,7 +69,7 @@ function(add_cache_end2end_tests cache_name)
 
                 COMMAND
                     "${CMAKE_COMMAND}"
-                    "-DPROGRAM=$<TARGET_FILE:cache_end2end_driver>"
+                    "-DPROGRAM=$<TARGET_FILE:end2end_tests>"
                     "-DALGORITHM=${cache_name}"
                     "-DINPUT_FILE=${input_file}"
                     "-DEXPECTED_FILE=${expected_file}"
