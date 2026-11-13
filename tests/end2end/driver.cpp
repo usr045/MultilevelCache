@@ -8,7 +8,7 @@
 #include "cache/lirs.hpp"
 #include "cache/two_q.hpp"
 
-using namespace cache;
+using namespace nhwc_cache;
 
 using KeyT = int;
 using DataT = int;

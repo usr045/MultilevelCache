@@ -10,7 +10,7 @@
 
 namespace {
 
-using namespace cache;
+using namespace nhwc_cache;
 
 TEST(ConstructorTest, AcceptsCacheSizeGreaterThanOne)
 {

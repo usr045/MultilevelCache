@@ -5,7 +5,7 @@
 
 #pragma once
 
-namespace cache {
+namespace nhwc_cache {
 
 /** @brief Whether the requested data was resident before the lookup. */
 enum HitStatus : bool { MISS = false, HIT = true };
@@ -21,4 +21,4 @@ template <typename DataT> struct AccessResult {
     HitStatus status;  // HIT for resident data; MISS when loading was required.
 };
 
-} // namespace cache
+} // namespace nhwc_cache

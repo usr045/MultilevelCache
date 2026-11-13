@@ -12,7 +12,7 @@
 
 namespace {
 
-using namespace cache;
+using namespace nhwc_cache;
 using IntTrace = unit_tests::Trace<LIRS<int, int>>;
 
 TEST(ConstructorTest, AcceptsCacheSizeGreaterThanOne)

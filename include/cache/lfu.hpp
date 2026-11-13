@@ -13,7 +13,7 @@
 
 #include "access_result.hpp"
 
-namespace cache {
+namespace nhwc_cache {
 
 /**
  * @class LFU
@@ -160,4 +160,4 @@ private:
 
 }; // class LFU
 
-} // namespace cache
+} // namespace nhwc_cache

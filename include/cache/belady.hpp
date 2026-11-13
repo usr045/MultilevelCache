@@ -11,7 +11,7 @@
 
 #include "access_result.hpp"
 
-namespace cache {
+namespace nhwc_cache {
 
 /**
  * @class Belady
@@ -45,4 +45,4 @@ private:
 
 }; // class Belady
 
-} // namespace cache
+} // namespace nhwc_cache

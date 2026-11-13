@@ -17,7 +17,7 @@
 
 #include "access_result.hpp"
 
-namespace cache {
+namespace nhwc_cache {
 
 /**
  * @class ARC
@@ -34,10 +34,10 @@ public:
      * @param size Maximum number of resident entries.
      * @throws std::invalid_argument If size <= 1.
      */
-    explicit ARC(std::size_t size) : cache_size_(size)
+    explicit ARC(std::size_t capacity) : capacity_(capacity)
     {
-        if (size <= 1)
-            throw std::invalid_argument("ARC cache size must be greater "
+        if (capacity <= 1)
+            throw std::invalid_argument("ARC cache capacity must be greater "
                                         "than one");
     }
 
@@ -102,7 +102,7 @@ private:
     std::unordered_map<KeyT, Entry> entries_table_{};
 
     /** @brief Maximum number of resident entries in T1 and T2 in total. */
-    std::size_t cache_size_ = 0;
+    std::size_t capacity_ = 0;
 
     /**
      * @brief Adaptive coefficient controlling the target size of T1.
@@ -128,7 +128,7 @@ private:
     {
         const std::size_t delta1 = B1_.size() >= B2_.size() ? 1 : B2_.size() / B1_.size();
 
-        p_coeff_ += std::min(delta1, cache_size_ - p_coeff_);
+        p_coeff_ += std::min(delta1, capacity_ - p_coeff_);
 
         replace(false);
 
@@ -154,7 +154,7 @@ private:
     /** @brief Makes room and loads a previously unseen key into T1. */
     AccessResult<DataT> case_IV(const KeyT& key, const LoaderT& loader)
     {
-        if ((T1_.size() + B1_.size()) == cache_size_)
+        if ((T1_.size() + B1_.size()) == capacity_)
             case_IV_A();
         else
             case_IV_B();
@@ -167,7 +167,7 @@ private:
     /** @brief Makes room when T1 and B1 together reach cache capacity. */
     void case_IV_A()
     {
-        if (T1_.size() < cache_size_) {
+        if (T1_.size() < capacity_) {
             remove_lru_from_cache(B1_);
 
             replace(false);
@@ -180,12 +180,12 @@ private:
     /** @brief Trims history and replaces a resident entry when needed. */
     void case_IV_B()
     {
-        assert((T1_.size() + B1_.size()) < cache_size_);
+        assert((T1_.size() + B1_.size()) < capacity_);
 
         const std::size_t sum = T1_.size() + T2_.size() + B1_.size() + B2_.size();
 
-        if (sum >= cache_size_) {
-            if (sum == 2 * cache_size_)
+        if (sum >= capacity_) {
+            if (sum == 2 * capacity_)
                 remove_lru_from_cache(B2_);
 
             replace(false);
@@ -258,4 +258,4 @@ private:
 
 }; // class ARC
 
-} // namespace cache
+} // namespace nhwc_cache

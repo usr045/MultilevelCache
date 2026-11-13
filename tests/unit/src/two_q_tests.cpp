@@ -10,7 +10,7 @@
 
 namespace {
 
-using namespace cache;
+using namespace nhwc_cache;
 
 void fill_am(unit_tests::Trace<TwoQ<int, int>>& trace)
 {
@@ -208,7 +208,3 @@ TEST(TypesTest, WorksWithStringKeysAndValues)
 }
 
 } // anonymous namespace
-
-#ifdef SANITIZE
-int a = 4;
-#endif

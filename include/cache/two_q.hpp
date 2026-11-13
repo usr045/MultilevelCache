@@ -15,7 +15,7 @@
 
 #include "access_result.hpp"
 
-namespace cache {
+namespace nhwc_cache {
 
 /**
  * @class TwoQ
@@ -28,15 +28,15 @@ template <typename KeyT, typename DataT> class TwoQ {
 public:
     /**
      * @brief Creates a cache with the given resident capacity.
-     * @param cache_size Maximum number of resident entries.
-     * @throws std::invalid_argument If cache_size <= 1.
+     * @param capacity Maximum number of resident entries.
+     * @throws std::invalid_argument if capacity <= 1.
      */
-    explicit TwoQ(std::size_t cache_size)
-        : K_in_(std::max<std::size_t>(1, cache_size / 4)),
-          K_out_(std::max<std::size_t>(1, cache_size / 2)), free_slots_(cache_size)
+    explicit TwoQ(std::size_t capacity)
+        : K_in_(std::max<std::size_t>(1, capacity / 4)),
+          K_out_(std::max<std::size_t>(1, capacity / 2)), free_slots_(capacity)
     {
-        if (cache_size <= 1)
-            throw std::invalid_argument("");
+        if (capacity <= 1)
+            throw std::invalid_argument(""); // FIXME
     }
 
     TwoQ(const TwoQ&) = delete;
@@ -187,4 +187,4 @@ private:
 
 }; // class TwoQ
 
-} // namespace cache
+} // namespace nhwc_cache

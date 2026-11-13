@@ -16,7 +16,7 @@
 
 #include "access_result.hpp"
 
-namespace cache {
+namespace nhwc_cache {
 
 /**
  * @class LIRS
@@ -344,4 +344,4 @@ private:
 
 }; // class LIRS
 
-} // namespace cache
+} // namespace nhwc_cache

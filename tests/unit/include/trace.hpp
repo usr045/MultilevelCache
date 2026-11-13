@@ -14,7 +14,7 @@
 
 #include "access_result.hpp"
 
-namespace cache::unit_tests {
+namespace nhwc_cache::unit_tests {
 
 void load_data(int key, int load_count, int& data);
 void load_data(const std::string& key, int load_count, std::string& data);
@@ -54,4 +54,4 @@ private:
     std::unordered_map<KeyT, int> loads_per_key_{};
 };
 
-} // namespace cache::unit_tests
+} // namespace nhwc_cache::unit_tests
