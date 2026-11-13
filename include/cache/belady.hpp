@@ -29,7 +29,7 @@ public:
      */
     explicit Belady(std::size_t capacity) : cache_capacity_(capacity)
     {
-        if (capacity <= 2)
+        if (capacity <= 1)
             throw std::invalid_argument("Belady cache capacity must be "
                                         "greater than 1");
     }
