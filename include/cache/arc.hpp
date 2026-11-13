@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #include "access_result.hpp"
+#include "cache_interface.hpp"
 
 namespace nhwc_cache {
 
@@ -27,7 +28,7 @@ namespace nhwc_cache {
  * @note Copying and moving are disabled.
  * @see https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache
  */
-template <typename KeyT, typename DataT> class ARC {
+template <typename KeyT, typename DataT> class ARC final : public Cache<KeyT, DataT> {
 public:
     /**
      * @brief Creates a cache with the given resident capacity.
@@ -58,7 +59,7 @@ public:
      * @param loader  LoaderT (std::function<void(const KeyT&, DataT&)>)
      * @return Cached data by reference and HIT or MISS; see AccessResult.
      */
-    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader)
+    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader) override
     {
         auto entry_it = entries_table_.find(key);
 

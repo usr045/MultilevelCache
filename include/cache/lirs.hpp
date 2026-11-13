@@ -15,6 +15,7 @@
 #include <unordered_map>
 
 #include "access_result.hpp"
+#include "cache_interface.hpp"
 
 namespace nhwc_cache {
 
@@ -25,7 +26,7 @@ namespace nhwc_cache {
  * @tparam DataT Default-constructible cached data type.
  * @note Copying and moving are disabled.
  */
-template <typename KeyT, typename DataT> class LIRS {
+template <typename KeyT, typename DataT> class LIRS final : public Cache<KeyT, DataT> {
 public:
     /**
      * @brief Creates a cache with the given resident capacity.
@@ -62,7 +63,7 @@ public:
      * @param loader  LoaderT (std::function<void(const KeyT&, DataT&)>)
      * @return Cached data by reference and HIT or MISS; see AccessResult.
      */
-    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader)
+    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader) override
     {
         EntryIterT entry_it = entries_.find(key);
 

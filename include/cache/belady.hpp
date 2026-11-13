@@ -10,6 +10,7 @@
 #include <stdexcept>
 
 #include "access_result.hpp"
+#include "cache_interface.hpp"
 
 namespace nhwc_cache {
 
@@ -19,7 +20,7 @@ namespace nhwc_cache {
  * @tparam KeyT Cache key type.
  * @tparam DataT Cached data type.
  */
-template <typename KeyT, typename DataT> class Belady {
+template <typename KeyT, typename DataT> class Belady final : public Cache<KeyT, DataT> {
 public:
     /**
      * @brief Creates a cache with the given resident capacity.
@@ -38,7 +39,7 @@ public:
 
     using LoaderT = std::function<void(const KeyT&, DataT&)>;
 
-    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader) {}
+    AccessResult<DataT> lookup_update(const KeyT& key, const LoaderT& loader) override {}
 
 private:
     std::size_t cache_capacity_;
