@@ -41,5 +41,18 @@ add_cache_lib(lirs)
 add_cache_lib(lfu)
 add_cache_lib(two_q)
 
+add_executable(cache_driver
+    src/driver.cpp
+    src/config.cpp
+)
+
+target_link_libraries(cache_driver PRIVATE
+    arc lirs lfu two_q    
+)
+
+target_include_directories(cache_driver PRIVATE
+    include
+)
+
 add_subdirectory(tests/unit)
 add_subdirectory(tests/end2end)

@@ -15,7 +15,7 @@
 
 namespace nhwc_cache {
 
-enum class CachePolicy {ARC, LFU, LIRS, TWO_Q};
+enum class CachePolicy { ARC, LFU, LIRS, TWO_Q };
 
 class CacheConfig final {
 public:
@@ -26,7 +26,7 @@ public:
 
     void read_config(const char* config_path);
 
-    std::vector<LevelInfo> config() const noexcept {return config_;}
+    std::vector<LevelInfo> config() const noexcept { return config_; }
 
 private:
     std::vector<LevelInfo> config_;
