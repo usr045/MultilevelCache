@@ -37,7 +37,8 @@ public:
           K_out_(std::max<std::size_t>(1, capacity / 2)), free_slots_(capacity)
     {
         if (capacity <= 1)
-            throw std::invalid_argument(""); // FIXME
+            throw std::invalid_argument("Two Q cache capacity must be greater "
+                                        "than one");
     }
 
     TwoQ(const TwoQ&) = delete;
